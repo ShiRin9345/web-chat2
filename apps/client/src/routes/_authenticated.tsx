@@ -3,7 +3,6 @@ import {
   SidebarProvider,
   Sidebar,
   SidebarContent,
-  SidebarInset,
 } from "@workspace/ui/components/sidebar";
 import {
   ResizablePanelGroup,
@@ -73,17 +72,6 @@ function AuthenticatedLayout() {
       href: "/contacts",
     },
     {
-      icon: UserPlus,
-      label: "群聊",
-      href: "/groups",
-    },
-    {
-      icon: Bell,
-      label: "好友申请",
-      href: "/requests",
-      badge: 3, // 模拟未读申请数量
-    },
-    {
       icon: Settings,
       label: "设置",
       href: "/settings",
@@ -94,10 +82,8 @@ function AuthenticatedLayout() {
     <TooltipProvider>
       <SidebarProvider>
         <div className="flex h-screen w-full">
-          {/* 左侧导航栏 */}
-          <Sidebar className="w-16 border-r">
+          <Sidebar className="border-r">
             <SidebarContent className="flex flex-col items-center py-4">
-              {/* 导航图标 */}
               <div className="flex flex-col items-center space-y-2">
                 {navigationItems.map((item) => (
                   <Tooltip key={item.label}>
@@ -147,62 +133,33 @@ function AuthenticatedLayout() {
               </DropdownMenu>
             </SidebarContent>
           </Sidebar>
-
-          {/* 中间和右侧区域 */}
           <ResizablePanelGroup direction="horizontal" className="flex-1">
-            {/* 中间列表栏 */}
-            <ResizablePanel defaultSize={25} minSize={20} maxSize={35}>
-              <div className="h-full border-r">
+            <ResizablePanel defaultSize={25} minSize={20} maxSize={30}>
+              <div className="h-full border-r bg-background">
                 <ScrollArea className="h-full">
                   <div className="p-4">
                     <h2 className="text-lg font-semibold mb-4">最近会话</h2>
-                    {/* 这里将根据路由显示不同的列表内容 */}
-                    <div className="space-y-2">
-                      <div className="p-3 rounded-lg hover:bg-accent cursor-pointer">
-                        <div className="flex items-center space-x-3">
-                          <Avatar className="h-10 w-10">
-                            <AvatarFallback>JD</AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium">张三</p>
-                            <p className="text-xs text-muted-foreground truncate">
-                              你好，最近怎么样？
-                            </p>
-                          </div>
-                          <Badge variant="secondary" className="text-xs">
-                            2
-                          </Badge>
-                        </div>
-                      </div>
-
-                      <div className="p-3 rounded-lg hover:bg-accent cursor-pointer">
-                        <div className="flex items-center space-x-3">
-                          <Avatar className="h-10 w-10">
-                            <AvatarFallback>LS</AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium">李四</p>
-                            <p className="text-xs text-muted-foreground truncate">
-                              明天见！
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    <Outlet />
                   </div>
                 </ScrollArea>
               </div>
             </ResizablePanel>
 
-            <ResizableHandle />
+            <ResizableHandle withHandle />
 
-            {/* 右侧内容区 */}
-            <ResizablePanel>
-              <SidebarInset>
-                <div className="h-full">
-                  <Outlet />
+            {/* 右侧内容区 - 默认显示空白，点击列表项后显示详情 */}
+            <ResizablePanel defaultSize={70}>
+              <div className="h-full bg-muted/20 flex items-center justify-center">
+                <div className="text-center text-muted-foreground">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+                    <MessageSquare className="w-8 h-8" />
+                  </div>
+                  <p className="text-lg font-medium">选择一个会话开始聊天</p>
+                  <p className="text-sm mt-2">
+                    从左侧列表中选择一个联系人或群聊
+                  </p>
                 </div>
-              </SidebarInset>
+              </div>
             </ResizablePanel>
           </ResizablePanelGroup>
         </div>

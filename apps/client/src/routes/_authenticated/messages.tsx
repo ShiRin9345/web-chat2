@@ -37,7 +37,7 @@ function MessagesPage() {
     },
     {
       id: "3",
-      name: "工作群",
+      name: "工作群sfdsfsdfsdf",
       avatar: "",
       lastMessage: "王五: 今天的会议推迟到下午3点",
       time: "08:45",
@@ -47,21 +47,14 @@ function MessagesPage() {
   ];
 
   return (
-    <div className="h-full flex flex-col">
-      {/* 顶部搜索栏 */}
-      <div className="p-4 border-b">
-        <div className="flex items-center space-x-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="搜索会话..." className="pl-10" />
-          </div>
-          <Button size="sm" variant="outline">
-            <Plus className="h-4 w-4" />
-          </Button>
+    <div className="h-full flex flex-col gap-2">
+      <div className="flex gap-2 ">
+        <Input placeholder="搜索会话..." className="pl-10" />
+        <div className="flex justify-center w-10 h-10 border rounded-md items-center">
+          <Plus className="" />
         </div>
       </div>
 
-      {/* 会话列表 */}
       <ScrollArea className="flex-1">
         <div className="p-2">
           {conversations.map((conversation) => (
@@ -84,19 +77,19 @@ function MessagesPage() {
                   )}
                 </div>
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-medium truncate">
+                <div className="flex-1 flex min-w-0">
+                  <div className="flex flex-col items-start justify-between flex-1 min-w-0">
+                    <h3 className="text-sm font-medium line-clamp-1 w-full">
                       {conversation.name}
                     </h3>
-                    <span className="text-xs text-muted-foreground">
-                      {conversation.time}
+                    <span className="text-xs text-muted-foreground line-clamp-1">
+                      {conversation.lastMessage}
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between mt-1">
-                    <p className="text-xs text-muted-foreground truncate">
-                      {conversation.lastMessage}
+                  <div className="flex flex-col items-center justify-between mt-1 ml-auto">
+                    <p className="text-xs text-muted-foreground">
+                      {conversation.time}
                     </p>
                     {conversation.unreadCount > 0 && (
                       <Badge variant="destructive" className="text-xs">

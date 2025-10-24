@@ -15,6 +15,7 @@ export const Route = createFileRoute("/_authenticated/messages/$chatId")({
 
 function ChatPage() {
   const { chatId } = Route.useParams();
+  console.log(chatId);
 
   // 模拟聊天数据
   const messages = [
