@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
 
 import * as TanStackQueryProvider from "@/provider/root-provider.tsx";
+import { authClient } from "@/lib/auth-client";
 
 // Import the generated route tree
 import { routeTree } from "./routeTree.gen";
@@ -12,7 +13,10 @@ import "@workspace/ui/globals.css";
 const TanStackQueryProviderContext = TanStackQueryProvider.getContext();
 const router = createRouter({
   routeTree,
-  context: TanStackQueryProviderContext,
+  context: {
+    ...TanStackQueryProviderContext,
+    auth: authClient,
+  },
   defaultPreload: "intent",
   scrollRestoration: true,
   defaultStructuralSharing: true,
