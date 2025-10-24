@@ -1,16 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useAuth } from "../hooks/useAuth";
 import { useNavigate } from "@tanstack/react-router";
+import { authClient } from "../lib/auth-client";
 
 export const Route = createFileRoute("/")({
   component: App,
 });
 
 function App() {
-  const { user, signOut } = useAuth();
+  const { data: session, isPending } = authClient.useSession();
   const navigate = useNavigate();
+
   const handleSignOut = async () => {
-    await signOut();
+    await authClient.signOut();
     navigate({ to: "/signIn" });
   };
 
@@ -23,7 +24,11 @@ function App() {
               欢迎来到 Web Chat
             </h1>
 
-            {user && (
+            {isPending ? (
+              <div className="text-center py-4">
+                <p className="text-gray-500">加载中...</p>
+              </div>
+            ) : session?.user ? (
               <div className="space-y-4">
                 <div className="border-b border-gray-200 pb-4">
                   <h2 className="text-lg font-medium text-gray-900">
@@ -31,18 +36,20 @@ function App() {
                   </h2>
                   <div className="mt-2 space-y-2">
                     <div className="flex items-center space-x-3">
-                      {user.image && (
+                      {session.user.image && (
                         <img
-                          src={user.image}
-                          alt={user.name || user.email}
+                          src={session.user.image}
+                          alt={session.user.name || session.user.email}
                           className="w-10 h-10 rounded-full"
                         />
                       )}
                       <div>
                         <p className="text-sm font-medium text-gray-900">
-                          {user.name || "未设置姓名"}
+                          {session.user.name || "未设置姓名"}
                         </p>
-                        <p className="text-sm text-gray-500">{user.email}</p>
+                        <p className="text-sm text-gray-500">
+                          {session.user.email}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -56,6 +63,10 @@ function App() {
                     登出
                   </button>
                 </div>
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-gray-500">未登录</p>
               </div>
             )}
           </div>

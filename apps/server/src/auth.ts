@@ -18,6 +18,10 @@ export const auth = betterAuth({
     autoSignIn: true,
     minPasswordLength: 6,
   },
+  session: {
+    expiresIn: 60 * 60 * 24 * 7, // 7 days
+    updateAge: 60 * 60 * 24, // 1 day (every 1 day the session expiration is updated)
+  },
   trustedOrigins: ["http://localhost:3000"],
   baseURL: "http://localhost:3001",
   secret:

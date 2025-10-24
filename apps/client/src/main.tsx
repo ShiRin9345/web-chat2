@@ -14,13 +14,7 @@ import "@workspace/ui/globals.css";
 const TanStackQueryProviderContext = TanStackQueryProvider.getContext();
 const router = createRouter({
   routeTree,
-  context: {
-    ...TanStackQueryProviderContext,
-    auth: {
-      user: null,
-      isLoading: true,
-    },
-  },
+  context: TanStackQueryProviderContext,
   defaultPreload: "intent",
   scrollRestoration: true,
   defaultStructuralSharing: true,

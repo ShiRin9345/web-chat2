@@ -1,6 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
-import { useAuth } from "../hooks/useAuth";
+import { useActionState } from "react";
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
 import {
@@ -10,43 +9,28 @@ import {
   FieldError,
   FieldGroup,
 } from "@workspace/ui/components/field";
+import { signInAction } from "@/actions/auth";
 
 export const Route = createFileRoute("/signIn")({
   component: SignInPage,
 });
 
 function SignInPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const { signIn } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
+  const [state, formAction, isPending] = useActionState(
+    async (prevState: { error?: string }, formData: FormData) => {
+      const result = await signInAction(prevState, formData);
 
-    try {
-      const { data, error } = await signIn({
-        email,
-        password,
-      });
-
-      if (error) {
-        setError(error.message || "登录失败");
-      } else if (data) {
-        // 登录成功，跳转到首页
+      // 如果登录成功，跳转到首页
+      if (!result.error) {
         navigate({ to: "/" });
       }
-    } catch (err) {
-      setError("登录过程中发生错误");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+
+      return result;
+    },
+    { error: undefined }
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -56,7 +40,7 @@ function SignInPage() {
           <p className="mt-2 text-sm text-gray-600">登录到你的 Web Chat 账户</p>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        <form className="mt-8 space-y-6" action={formAction}>
           <FieldGroup>
             <Field>
               <FieldLabel htmlFor="email">邮箱地址</FieldLabel>
@@ -65,8 +49,6 @@ function SignInPage() {
                 name="email"
                 type="email"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
                 placeholder="请输入邮箱地址"
                 autoComplete="email"
               />
@@ -80,8 +62,6 @@ function SignInPage() {
                 name="password"
                 type="password"
                 required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
                 placeholder="请输入密码"
                 autoComplete="current-password"
               />
@@ -89,11 +69,11 @@ function SignInPage() {
             </Field>
           </FieldGroup>
 
-          {error && <FieldError>{error}</FieldError>}
+          {state.error && <FieldError>{state.error}</FieldError>}
 
           <div>
-            <Button type="submit" disabled={isLoading} className="w-full">
-              {isLoading ? "登录中..." : "登录"}
+            <Button type="submit" disabled={isPending} className="w-full">
+              {isPending ? "登录中..." : "登录"}
             </Button>
           </div>
 
