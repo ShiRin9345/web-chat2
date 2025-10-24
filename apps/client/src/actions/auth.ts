@@ -49,3 +49,23 @@ export async function signInAction(
     return { error: "登录过程中发生错误" };
   }
 }
+
+export async function updateUserProfile(data: {
+  name: string;
+  image?: string;
+}) {
+  try {
+    const { data: result, error } = await authClient.updateUser({
+      name: data.name,
+      image: data.image,
+    });
+
+    if (error) {
+      throw new Error(error.message || "更新失败");
+    }
+
+    return result;
+  } catch (err) {
+    throw new Error("更新用户信息失败");
+  }
+}

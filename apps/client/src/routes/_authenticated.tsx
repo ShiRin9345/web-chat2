@@ -5,12 +5,6 @@ import {
   SidebarContent,
 } from "@workspace/ui/components/sidebar";
 import {
-  ResizablePanelGroup,
-  ResizablePanel,
-  ResizableHandle,
-} from "@workspace/ui/components/resizable";
-import { ScrollArea } from "@workspace/ui/components/scroll-area";
-import {
   Avatar,
   AvatarFallback,
   AvatarImage,
@@ -23,22 +17,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@workspace/ui/components/tooltip";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@workspace/ui/components/dropdown-menu";
-import {
-  MessageSquare,
-  Users,
-  UserPlus,
-  Settings,
-  LogOut,
-  Bell,
-} from "lucide-react";
+import { MessageSquare, Users, Settings } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { useNavigate } from "@tanstack/react-router";
+import { UserProfilePopover } from "@/components/UserProfilePopover";
+import { DialogProvider } from "@/components/DialogProvider";
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async ({ context }) => {
@@ -53,11 +36,6 @@ export const Route = createFileRoute("/_authenticated")({
 function AuthenticatedLayout() {
   const navigate = useNavigate();
   const { data: session } = authClient.useSession();
-
-  const handleSignOut = async () => {
-    await authClient.signOut();
-    navigate({ to: "/signIn" });
-  };
 
   const navigationItems = [
     {
@@ -113,28 +91,21 @@ function AuthenticatedLayout() {
               <Separator className="my-4" />
 
               {/* 用户头像和菜单 */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-accent transition-colors">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={session?.user?.image || undefined} />
-                      <AvatarFallback>
-                        {session?.user?.name?.charAt(0) || "U"}
-                      </AvatarFallback>
-                    </Avatar>
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuItem onClick={handleSignOut}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    退出登录
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <UserProfilePopover>
+                <button className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-accent transition-colors">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={session?.user?.image || undefined} />
+                    <AvatarFallback>
+                      {session?.user?.name?.charAt(0) || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                </button>
+              </UserProfilePopover>
             </SidebarContent>
           </Sidebar>
           <Outlet />
         </div>
+        <DialogProvider />
       </SidebarProvider>
     </TooltipProvider>
   );
