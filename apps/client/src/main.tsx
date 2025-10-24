@@ -16,6 +16,10 @@ const router = createRouter({
   routeTree,
   context: {
     ...TanStackQueryProviderContext,
+    auth: {
+      user: null,
+      isLoading: true,
+    },
   },
   defaultPreload: "intent",
   scrollRestoration: true,
