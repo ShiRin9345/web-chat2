@@ -27,6 +27,16 @@ export async function signUpAction(
     }
 
     if (data) {
+      // 如果注册成功，更新用户的头像
+      if (avatar && data.user) {
+        try {
+          await authClient.updateUser({
+            image: avatar,
+          });
+        } catch (updateError) {
+          console.warn("更新用户头像失败:", updateError);
+        }
+      }
       return { error: undefined };
     }
 

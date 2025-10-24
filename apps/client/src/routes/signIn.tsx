@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useActionState } from "react";
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
@@ -80,12 +80,12 @@ function SignInPage() {
           <div className="text-center">
             <p className="text-sm text-gray-600">
               还没有账户？{" "}
-              <a
-                href="/signUp"
+              <Link
+                to="/signUp"
                 className="font-medium text-blue-600 hover:text-blue-500"
               >
                 立即注册
-              </a>
+              </Link>
             </p>
           </div>
         </form>
