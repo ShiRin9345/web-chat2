@@ -400,7 +400,7 @@ function SettingsPage() {
   return (
     <>
       <ResizablePanelGroup direction="horizontal" className="flex-1">
-        <ResizablePanel defaultSize={25} minSize={20} maxSize={30}>
+        <ResizablePanel defaultSize={30} minSize={20} maxSize={40}>
           <div className="h-full border-r bg-background">
             <ScrollArea className="h-full">
               <div className="p-4">
@@ -431,7 +431,7 @@ function SettingsPage() {
         <ResizableHandle withHandle />
 
         {/* 右侧内容区 */}
-        <ResizablePanel defaultSize={70}>
+        <ResizablePanel defaultSize={70} minSize={30}>
           <div className="h-full bg-background">
             <ScrollArea className="h-full">
               <div className="p-6">{renderSettingsContent()}</div>

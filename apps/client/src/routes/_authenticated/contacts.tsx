@@ -174,7 +174,7 @@ function ContactsPage() {
         <ResizableHandle withHandle />
 
         {/* 右侧内容区 - 默认显示空白，点击列表项后显示详情 */}
-        <ResizablePanel defaultSize={70}>
+        <ResizablePanel defaultSize={75} minSize={30}>
           <div className="h-full bg-muted/20 flex items-center justify-center">
             <div className="text-center text-muted-foreground">
               <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
