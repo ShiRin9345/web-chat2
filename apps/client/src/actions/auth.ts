@@ -5,21 +5,11 @@ export async function signUpAction(
   formData: FormData
 ) {
   try {
-    const email = formData.get("email") as string;
-    const password = formData.get("password") as string;
-    const name = formData.get("name") as string;
-    const avatar = formData.get("avatar") as string;
-
-    // 验证头像 URL
-    if (!avatar || !isValidUrl(avatar)) {
-      return { error: "请提供一个有效的头像 URL" };
-    }
-
     const { data, error } = await authClient.signUp.email({
-      email,
-      password,
-      name,
-      image: avatar, // Better Auth 使用 image 字段
+      email: formData.get("email") as string,
+      password: formData.get("password") as string,
+      name: formData.get("name") as string,
+      image: formData.get("avatar") as string,
     });
 
     if (error) {
@@ -27,32 +17,12 @@ export async function signUpAction(
     }
 
     if (data) {
-      // 如果注册成功，更新用户的头像
-      if (avatar && data.user) {
-        try {
-          await authClient.updateUser({
-            image: avatar,
-          });
-        } catch (updateError) {
-          console.warn("更新用户头像失败:", updateError);
-        }
-      }
       return { error: undefined };
     }
 
     return { error: "注册失败" };
   } catch (err) {
     return { error: "注册过程中发生错误" };
-  }
-}
-
-// 简单的 URL 验证函数
-function isValidUrl(string: string): boolean {
-  try {
-    new URL(string);
-    return true;
-  } catch (_) {
-    return false;
   }
 }
 

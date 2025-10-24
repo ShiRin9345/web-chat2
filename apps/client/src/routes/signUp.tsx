@@ -9,11 +9,11 @@ import {
   FieldError,
   FieldGroup,
 } from "@workspace/ui/components/field";
-import { signUpAction } from "@/actions/auth";
-import { Upload, User } from "lucide-react";
-import { useState } from "react";
+import { Loader2, User } from "lucide-react";
+import { useRef, useState } from "react";
 import { z } from "zod";
 import uploadAvatarToOSS from "@/utils/uploadAvatar";
+import { signUpAction } from "@/actions/auth";
 
 // Zod 验证模式
 const signUpSchema = z.object({
@@ -34,9 +34,9 @@ export const Route = createFileRoute("/signUp")({
 
 function SignUpPage() {
   const navigate = useNavigate();
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const selectedFileRef = useRef<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm({
     defaultValues: {
@@ -45,22 +45,17 @@ function SignUpPage() {
       password: "",
     },
     validators: {
-      onBlur: signUpSchema,
+      onSubmit: signUpSchema,
     },
     onSubmit: async ({ value }) => {
-      setIsSubmitting(true);
-
       try {
-        // 检查头像是否已选择
-        if (!selectedFile) {
+        if (!selectedFileRef.current) {
           alert("请选择头像");
           return;
         }
 
-        let avatarUrl = "";
-
         // 上传头像到 OSS
-        avatarUrl = await uploadAvatarToOSS(selectedFile);
+        const avatarUrl = await uploadAvatarToOSS(selectedFileRef.current);
 
         // 创建 FormData 并添加头像 URL
         const formData = new FormData();
@@ -69,6 +64,7 @@ function SignUpPage() {
         formData.set("password", value.password);
         formData.set("avatar", avatarUrl);
 
+        // 调用注册 API
         const result = await signUpAction({ error: undefined }, formData);
 
         if (result.error) {
@@ -78,8 +74,7 @@ function SignUpPage() {
         }
       } catch (error) {
         console.error(error);
-      } finally {
-        setIsSubmitting(false);
+        alert("注册失败，请重试");
       }
     },
   });
@@ -97,7 +92,7 @@ function SignUpPage() {
         return;
       }
 
-      setSelectedFile(file);
+      selectedFileRef.current = file;
       const url = URL.createObjectURL(file);
       setPreviewUrl(url);
     }
@@ -109,7 +104,6 @@ function SignUpPage() {
         <div className="text-center">
           <h1 className="text-3xl font-bold text-gray-900">注册账户</h1>
           <p className="mt-2 text-sm text-gray-600">创建你的 Web Chat 账户</p>
-          <p className="mt-1 text-xs text-amber-600">* 头像为必填项</p>
         </div>
 
         <form
@@ -131,11 +125,9 @@ function SignUpPage() {
                     type="text"
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
-                    onBlur={field.handleBlur}
                     placeholder="请输入你的姓名"
                     autoComplete="name"
                   />
-                  <FieldDescription>这将显示在你的个人资料中</FieldDescription>
                   {field.state.meta.errors.length > 0 && (
                     <FieldError>
                       {field.state.meta.errors[0]?.message ||
@@ -157,11 +149,9 @@ function SignUpPage() {
                     type="email"
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
-                    onBlur={field.handleBlur}
                     placeholder="请输入邮箱地址"
                     autoComplete="email"
                   />
-                  <FieldDescription>我们将使用此邮箱与你联系</FieldDescription>
                   {field.state.meta.errors.length > 0 && (
                     <FieldError>
                       {field.state.meta.errors[0]?.message ||
@@ -183,11 +173,9 @@ function SignUpPage() {
                     type="password"
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
-                    onBlur={field.handleBlur}
                     placeholder="请输入密码"
                     autoComplete="new-password"
                   />
-                  <FieldDescription>密码至少需要 6 个字符</FieldDescription>
                   {field.state.meta.errors.length > 0 && (
                     <FieldError>
                       {field.state.meta.errors[0]?.message ||
@@ -201,42 +189,34 @@ function SignUpPage() {
             <Field>
               <FieldLabel>头像 *</FieldLabel>
               <div className="flex flex-col items-center space-y-4">
-                {/* 圆形头像预览/上传区域 */}
-                <div className="relative">
-                  <div className="w-24 h-24 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 hover:border-gray-400 transition-colors cursor-pointer">
-                    {previewUrl ? (
-                      <img
-                        src={previewUrl}
-                        alt="头像预览"
-                        className="w-full h-full rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex flex-col items-center text-gray-400">
-                        <User className="w-8 h-8 text-gray-400" />
-                        <span className="text-xs mt-1">点击上传</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* 上传按钮覆盖层 */}
-                  <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 hover:bg-opacity-20 rounded-full transition-all">
-                    <Upload className="w-6 h-6 text-white opacity-0 hover:opacity-100 transition-opacity" />
-                  </div>
-
-                  {/* 隐藏的文件输入 */}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  />
+                <div
+                  className="w-24 h-24 rounded-full border-2 border-dashed border-gray-300 bg-gray-50 hover:border-gray-400 transition-colors cursor-pointer overflow-hidden relative"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {previewUrl ? (
+                    <img
+                      src={previewUrl}
+                      alt="头像预览"
+                      className="w-full h-full rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
+                      <User className="w-8 h-8 text-gray-400" />
+                      <span className="text-xs mt-1">点击上传</span>
+                    </div>
+                  )}
                 </div>
 
-                {/* 文件选择状态 */}
-                {selectedFile && (
-                  <div className="text-sm text-blue-600">
-                    ✓ 已选择头像，将在注册时上传
-                  </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="size-0 invisible"
+                />
+
+                {selectedFileRef.current && (
+                  <div className="text-sm text-blue-600">✓ 已选择头像 </div>
                 )}
               </div>
 
@@ -247,9 +227,21 @@ function SignUpPage() {
           </FieldGroup>
 
           <div>
-            <Button type="submit" disabled={isSubmitting} className="w-full">
-              {isSubmitting ? "注册中..." : "注册"}
-            </Button>
+            <form.Subscribe selector={(state) => state.isSubmitting}>
+              {(isSubmitting) => (
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full"
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  ) : (
+                    "注册"
+                  )}
+                </Button>
+              )}
+            </form.Subscribe>
           </div>
 
           <div className="text-center">

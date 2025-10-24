@@ -22,7 +22,6 @@ function SignInPage() {
     async (prevState: { error?: string }, formData: FormData) => {
       const result = await signInAction(prevState, formData);
 
-      // 如果登录成功，跳转到首页
       if (!result.error) {
         navigate({ to: "/" });
       }
