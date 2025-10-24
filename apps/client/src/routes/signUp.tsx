@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useActionState, useState } from "react";
+import { useForm } from "@tanstack/react-form";
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
 import {
@@ -11,7 +11,22 @@ import {
 } from "@workspace/ui/components/field";
 import { signUpAction } from "@/actions/auth";
 import { Upload, User } from "lucide-react";
-import { authClient } from "@/lib/auth-client";
+import { useState } from "react";
+import { z } from "zod";
+import uploadAvatarToOSS from "@/utils/uploadAvatar";
+
+// Zod 验证模式
+const signUpSchema = z.object({
+  name: z
+    .string()
+    .min(2, "姓名至少需要2个字符")
+    .max(50, "姓名不能超过50个字符"),
+  email: z.email("请输入有效的邮箱地址"),
+  password: z
+    .string()
+    .min(6, "密码至少需要6个字符")
+    .max(100, "密码不能超过100个字符"),
+});
 
 export const Route = createFileRoute("/signUp")({
   component: SignUpPage,
@@ -19,98 +34,72 @@ export const Route = createFileRoute("/signUp")({
 
 function SignUpPage() {
   const navigate = useNavigate();
-  const { data: session } = authClient.useSession();
-  const [avatarUrl, setAvatarUrl] = useState<string>("");
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string>("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string>("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [state, formAction, isPending] = useActionState(
-    async (prevState: { error?: string }, formData: FormData) => {
-      // 如果有头像 URL，添加到 formData 中
-      if (avatarUrl) {
-        formData.set("avatar", avatarUrl);
-      }
-
-      const result = await signUpAction(prevState, formData);
-
-      // 如果注册成功，跳转到首页
-      if (!result.error) {
-        navigate({ to: "/" });
-      }
-
-      return result;
+  const form = useForm({
+    defaultValues: {
+      name: "",
+      email: "",
+      password: "",
     },
-    { error: undefined }
-  );
+    validators: {
+      onBlur: signUpSchema,
+    },
+    onSubmit: async ({ value }) => {
+      setIsSubmitting(true);
 
-  // 处理文件上传
-  const handleFileUpload = async (file: File) => {
-    if (!file) return;
-
-    setIsUploading(true);
-    setUploadError("");
-
-    try {
-      // 获取 STS 临时凭证
-      const response = await fetch(
-        "http://localhost:3001/api/oss/get_sts_token_for_oss_upload",
-        {
-          method: "GET",
+      try {
+        // 检查头像是否已选择
+        if (!selectedFile) {
+          alert("请选择头像");
+          return;
         }
-      );
 
-      if (!response.ok) {
-        throw new Error(
-          `获取STS令牌失败: ${response.status} ${response.statusText}`
-        );
+        let avatarUrl = "";
+
+        // 上传头像到 OSS
+        avatarUrl = await uploadAvatarToOSS(selectedFile);
+
+        // 创建 FormData 并添加头像 URL
+        const formData = new FormData();
+        formData.set("name", value.name);
+        formData.set("email", value.email);
+        formData.set("password", value.password);
+        formData.set("avatar", avatarUrl);
+
+        const result = await signUpAction({ error: undefined }, formData);
+
+        if (result.error) {
+          alert(result.error);
+        } else {
+          navigate({ to: "/" });
+        }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setIsSubmitting(false);
       }
+    },
+  });
 
-      const credentials = await response.json();
-
-      // 动态导入 OSS SDK
-      const OSS = (await import("ali-oss")).default;
-
-      const client = new OSS({
-        bucket: "shirin-123",
-        region: "oss-cn-beijing",
-        accessKeyId: credentials.AccessKeyId,
-        accessKeySecret: credentials.AccessKeySecret,
-        stsToken: credentials.SecurityToken,
-      });
-
-      // 生成唯一的文件名
-      const fileName = `avatars/${session?.user?.id}-${file.name}`;
-
-      // 上传文件
-      const result = await client.put(fileName, file);
-
-      // 设置头像 URL
-      setAvatarUrl(result.url);
-    } catch (error) {
-      console.error("上传失败:", error);
-      setUploadError("头像上传失败，请重试");
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  // 处理文件选择
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // 验证文件类型
       if (!file.type.startsWith("image/")) {
-        setUploadError("请选择图片文件");
+        alert("请选择图片文件");
         return;
       }
 
-      // 验证文件大小 (5MB)
       if (file.size > 5 * 1024 * 1024) {
-        setUploadError("图片大小不能超过 5MB");
+        alert("图片大小不能超过 5MB");
         return;
       }
 
-      handleFileUpload(file);
+      setSelectedFile(file);
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
     }
   };
 
@@ -123,46 +112,91 @@ function SignUpPage() {
           <p className="mt-1 text-xs text-amber-600">* 头像为必填项</p>
         </div>
 
-        <form className="mt-8 space-y-6" action={formAction}>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            form.handleSubmit();
+          }}
+          className="mt-8 space-y-6"
+        >
           <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="name">姓名</FieldLabel>
-              <Input
-                id="name"
-                name="name"
-                type="text"
-                required
-                placeholder="请输入你的姓名"
-                autoComplete="name"
-              />
-              <FieldDescription>这将显示在你的个人资料中</FieldDescription>
-            </Field>
+            <form.Field
+              name="name"
+              children={(field) => (
+                <Field>
+                  <FieldLabel htmlFor={field.name}>姓名</FieldLabel>
+                  <Input
+                    id={field.name}
+                    name={field.name}
+                    type="text"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                    placeholder="请输入你的姓名"
+                    autoComplete="name"
+                  />
+                  <FieldDescription>这将显示在你的个人资料中</FieldDescription>
+                  {field.state.meta.errors.length > 0 && (
+                    <FieldError>
+                      {field.state.meta.errors[0]?.message ||
+                        String(field.state.meta.errors[0])}
+                    </FieldError>
+                  )}
+                </Field>
+              )}
+            />
 
-            <Field>
-              <FieldLabel htmlFor="email">邮箱地址</FieldLabel>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                required
-                placeholder="请输入邮箱地址"
-                autoComplete="email"
-              />
-              <FieldDescription>我们将使用此邮箱与你联系</FieldDescription>
-            </Field>
+            <form.Field
+              name="email"
+              children={(field) => (
+                <Field>
+                  <FieldLabel htmlFor={field.name}>邮箱地址</FieldLabel>
+                  <Input
+                    id={field.name}
+                    name={field.name}
+                    type="email"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                    placeholder="请输入邮箱地址"
+                    autoComplete="email"
+                  />
+                  <FieldDescription>我们将使用此邮箱与你联系</FieldDescription>
+                  {field.state.meta.errors.length > 0 && (
+                    <FieldError>
+                      {field.state.meta.errors[0]?.message ||
+                        String(field.state.meta.errors[0])}
+                    </FieldError>
+                  )}
+                </Field>
+              )}
+            />
 
-            <Field>
-              <FieldLabel htmlFor="password">密码</FieldLabel>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                required
-                placeholder="请输入密码"
-                autoComplete="new-password"
-              />
-              <FieldDescription>密码至少需要 6 个字符</FieldDescription>
-            </Field>
+            <form.Field
+              name="password"
+              children={(field) => (
+                <Field>
+                  <FieldLabel htmlFor={field.name}>密码</FieldLabel>
+                  <Input
+                    id={field.name}
+                    name={field.name}
+                    type="password"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                    placeholder="请输入密码"
+                    autoComplete="new-password"
+                  />
+                  <FieldDescription>密码至少需要 6 个字符</FieldDescription>
+                  {field.state.meta.errors.length > 0 && (
+                    <FieldError>
+                      {field.state.meta.errors[0]?.message ||
+                        String(field.state.meta.errors[0])}
+                    </FieldError>
+                  )}
+                </Field>
+              )}
+            />
 
             <Field>
               <FieldLabel>头像 *</FieldLabel>
@@ -170,15 +204,15 @@ function SignUpPage() {
                 {/* 圆形头像预览/上传区域 */}
                 <div className="relative">
                   <div className="w-24 h-24 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 hover:border-gray-400 transition-colors cursor-pointer">
-                    {avatarUrl ? (
+                    {previewUrl ? (
                       <img
-                        src={avatarUrl}
+                        src={previewUrl}
                         alt="头像预览"
                         className="w-full h-full rounded-full object-cover"
                       />
                     ) : (
                       <div className="flex flex-col items-center text-gray-400">
-                        <User className="w-8 h-8" />
+                        <User className="w-8 h-8 text-gray-400" />
                         <span className="text-xs mt-1">点击上传</span>
                       </div>
                     )}
@@ -195,41 +229,26 @@ function SignUpPage() {
                     accept="image/*"
                     onChange={handleFileChange}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    disabled={isUploading}
                   />
                 </div>
 
-                {/* 上传状态和错误信息 */}
-                {isUploading && (
-                  <div className="text-sm text-blue-600 flex items-center">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-                    上传中...
+                {/* 文件选择状态 */}
+                {selectedFile && (
+                  <div className="text-sm text-blue-600">
+                    ✓ 已选择头像，将在注册时上传
                   </div>
-                )}
-
-                {uploadError && (
-                  <div className="text-sm text-red-600">{uploadError}</div>
-                )}
-
-                {avatarUrl && !isUploading && (
-                  <div className="text-sm text-green-600">✓ 头像上传成功</div>
                 )}
               </div>
 
               <FieldDescription>
                 点击上方圆形区域选择头像图片，支持 JPG、PNG 格式，大小不超过 5MB
               </FieldDescription>
-
-              {/* 隐藏的输入字段，用于表单提交 */}
-              <input type="hidden" name="avatar" value={avatarUrl} required />
             </Field>
           </FieldGroup>
 
-          {state.error && <FieldError>{state.error}</FieldError>}
-
           <div>
-            <Button type="submit" disabled={isPending} className="w-full">
-              {isPending ? "注册中..." : "注册"}
+            <Button type="submit" disabled={isSubmitting} className="w-full">
+              {isSubmitting ? "注册中..." : "注册"}
             </Button>
           </div>
 
