@@ -3,7 +3,7 @@ import cors from "cors";
 import { config } from "dotenv";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./auth.ts";
-
+import { ossRouter } from "./routes/oss.ts";
 config({ path: ".env.local" });
 
 const app = express();
@@ -21,6 +21,7 @@ app.all("/api/auth/*splat", toNodeHandler(auth));
 
 // 重要：express.json() 必须在 Better Auth handler 之后
 app.use(express.json());
+app.use("/api/oss", ossRouter);
 
 app.get("/check", (_req, res) => {
   res.send("Hello World");

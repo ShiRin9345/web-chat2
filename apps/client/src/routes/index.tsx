@@ -1,9 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useNavigate } from "@tanstack/react-router";
-import { authClient } from "../lib/auth-client";
+import { authClient } from "@/lib/auth-client";
+import checkAuth from "@/utils/checkAuth";
 
 export const Route = createFileRoute("/")({
   component: App,
+  beforeLoad: checkAuth,
 });
 
 function App() {

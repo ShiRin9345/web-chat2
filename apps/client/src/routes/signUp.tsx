@@ -10,9 +10,11 @@ import {
   FieldGroup,
 } from "@workspace/ui/components/field";
 import { signUpAction } from "@/actions/auth";
+import checkAuth from "@/utils/checkAuth";
 
 export const Route = createFileRoute("/signUp")({
   component: SignUpPage,
+  beforeLoad: checkAuth,
 });
 
 function SignUpPage() {
@@ -38,6 +40,7 @@ function SignUpPage() {
         <div className="text-center">
           <h1 className="text-3xl font-bold text-gray-900">注册账户</h1>
           <p className="mt-2 text-sm text-gray-600">创建你的 Web Chat 账户</p>
+          <p className="mt-1 text-xs text-amber-600">* 头像为必填项</p>
         </div>
 
         <form className="mt-8 space-y-6" action={formAction}>
@@ -79,6 +82,21 @@ function SignUpPage() {
                 autoComplete="new-password"
               />
               <FieldDescription>密码至少需要 6 个字符</FieldDescription>
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor="avatar">头像 *</FieldLabel>
+              <Input
+                id="avatar"
+                name="avatar"
+                type="url"
+                required
+                placeholder="https://example.com/avatar.jpg"
+              />
+              <FieldDescription>
+                请提供一个头像图片的 URL
+                地址，例如：https://example.com/avatar.jpg
+              </FieldDescription>
             </Field>
           </FieldGroup>
 

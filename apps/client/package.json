@@ -19,7 +19,10 @@
     "@tanstack/react-router": "^1.132.0",
     "@tanstack/react-router-devtools": "^1.132.0",
     "@tanstack/router-plugin": "^1.132.0",
+    "@types/ali-oss": "^6.16.11",
     "@workspace/ui": "workspace:*",
+    "ali-oss": "^6.23.0",
+    "better-auth": "^1.3.10",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.544.0",
@@ -27,8 +30,7 @@
     "react-dom": "^19.2.0",
     "tailwind-merge": "^3.0.2",
     "tailwindcss": "^4.0.6",
-    "tw-animate-css": "^1.3.6",
-    "better-auth": "^1.3.10"
+    "tw-animate-css": "^1.3.6"
   },
   "devDependencies": {
     "@biomejs/biome": "2.2.4",
