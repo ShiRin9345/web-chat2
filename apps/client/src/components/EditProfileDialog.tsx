@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@workspace/ui/components/dialog";
@@ -116,6 +117,9 @@ export function EditProfileDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>编辑资料</DialogTitle>
+          <DialogDescription>
+            修改您的个人信息，包括头像和姓名
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
