@@ -14,9 +14,7 @@ import { Route as SignInRouteImport } from './routes/signIn'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
-import { Route as AuthenticatedRequestsRouteImport } from './routes/_authenticated/requests'
 import { Route as AuthenticatedMessagesRouteImport } from './routes/_authenticated/messages'
-import { Route as AuthenticatedGroupsRouteImport } from './routes/_authenticated/groups'
 import { Route as AuthenticatedContactsRouteImport } from './routes/_authenticated/contacts'
 import { Route as AuthenticatedMessagesChatIdRouteImport } from './routes/_authenticated/messages.$chatId'
 
@@ -44,19 +42,9 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedRequestsRoute = AuthenticatedRequestsRouteImport.update({
-  id: '/requests',
-  path: '/requests',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
 const AuthenticatedMessagesRoute = AuthenticatedMessagesRouteImport.update({
   id: '/messages',
   path: '/messages',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
-const AuthenticatedGroupsRoute = AuthenticatedGroupsRouteImport.update({
-  id: '/groups',
-  path: '/groups',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedContactsRoute = AuthenticatedContactsRouteImport.update({
@@ -76,9 +64,7 @@ export interface FileRoutesByFullPath {
   '/signIn': typeof SignInRoute
   '/signUp': typeof SignUpRoute
   '/contacts': typeof AuthenticatedContactsRoute
-  '/groups': typeof AuthenticatedGroupsRoute
   '/messages': typeof AuthenticatedMessagesRouteWithChildren
-  '/requests': typeof AuthenticatedRequestsRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/messages/$chatId': typeof AuthenticatedMessagesChatIdRoute
 }
@@ -87,9 +73,7 @@ export interface FileRoutesByTo {
   '/signIn': typeof SignInRoute
   '/signUp': typeof SignUpRoute
   '/contacts': typeof AuthenticatedContactsRoute
-  '/groups': typeof AuthenticatedGroupsRoute
   '/messages': typeof AuthenticatedMessagesRouteWithChildren
-  '/requests': typeof AuthenticatedRequestsRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/messages/$chatId': typeof AuthenticatedMessagesChatIdRoute
 }
@@ -100,9 +84,7 @@ export interface FileRoutesById {
   '/signIn': typeof SignInRoute
   '/signUp': typeof SignUpRoute
   '/_authenticated/contacts': typeof AuthenticatedContactsRoute
-  '/_authenticated/groups': typeof AuthenticatedGroupsRoute
   '/_authenticated/messages': typeof AuthenticatedMessagesRouteWithChildren
-  '/_authenticated/requests': typeof AuthenticatedRequestsRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/messages/$chatId': typeof AuthenticatedMessagesChatIdRoute
 }
@@ -113,9 +95,7 @@ export interface FileRouteTypes {
     | '/signIn'
     | '/signUp'
     | '/contacts'
-    | '/groups'
     | '/messages'
-    | '/requests'
     | '/settings'
     | '/messages/$chatId'
   fileRoutesByTo: FileRoutesByTo
@@ -124,9 +104,7 @@ export interface FileRouteTypes {
     | '/signIn'
     | '/signUp'
     | '/contacts'
-    | '/groups'
     | '/messages'
-    | '/requests'
     | '/settings'
     | '/messages/$chatId'
   id:
@@ -136,9 +114,7 @@ export interface FileRouteTypes {
     | '/signIn'
     | '/signUp'
     | '/_authenticated/contacts'
-    | '/_authenticated/groups'
     | '/_authenticated/messages'
-    | '/_authenticated/requests'
     | '/_authenticated/settings'
     | '/_authenticated/messages/$chatId'
   fileRoutesById: FileRoutesById
@@ -187,25 +163,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/requests': {
-      id: '/_authenticated/requests'
-      path: '/requests'
-      fullPath: '/requests'
-      preLoaderRoute: typeof AuthenticatedRequestsRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/messages': {
       id: '/_authenticated/messages'
       path: '/messages'
       fullPath: '/messages'
       preLoaderRoute: typeof AuthenticatedMessagesRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/groups': {
-      id: '/_authenticated/groups'
-      path: '/groups'
-      fullPath: '/groups'
-      preLoaderRoute: typeof AuthenticatedGroupsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/contacts': {
@@ -240,17 +202,13 @@ const AuthenticatedMessagesRouteWithChildren =
 
 interface AuthenticatedRouteChildren {
   AuthenticatedContactsRoute: typeof AuthenticatedContactsRoute
-  AuthenticatedGroupsRoute: typeof AuthenticatedGroupsRoute
   AuthenticatedMessagesRoute: typeof AuthenticatedMessagesRouteWithChildren
-  AuthenticatedRequestsRoute: typeof AuthenticatedRequestsRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedContactsRoute: AuthenticatedContactsRoute,
-  AuthenticatedGroupsRoute: AuthenticatedGroupsRoute,
   AuthenticatedMessagesRoute: AuthenticatedMessagesRouteWithChildren,
-  AuthenticatedRequestsRoute: AuthenticatedRequestsRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
 }
 

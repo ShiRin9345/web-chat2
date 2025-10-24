@@ -133,35 +133,7 @@ function AuthenticatedLayout() {
               </DropdownMenu>
             </SidebarContent>
           </Sidebar>
-          <ResizablePanelGroup direction="horizontal" className="flex-1">
-            <ResizablePanel defaultSize={25} minSize={20} maxSize={30}>
-              <div className="h-full border-r bg-background">
-                <ScrollArea className="h-full">
-                  <div className="p-4">
-                    <h2 className="text-lg font-semibold mb-4">最近会话</h2>
-                    <Outlet />
-                  </div>
-                </ScrollArea>
-              </div>
-            </ResizablePanel>
-
-            <ResizableHandle withHandle />
-
-            {/* 右侧内容区 - 默认显示空白，点击列表项后显示详情 */}
-            <ResizablePanel defaultSize={70}>
-              <div className="h-full bg-muted/20 flex items-center justify-center">
-                <div className="text-center text-muted-foreground">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
-                    <MessageSquare className="w-8 h-8" />
-                  </div>
-                  <p className="text-lg font-medium">选择一个会话开始聊天</p>
-                  <p className="text-sm mt-2">
-                    从左侧列表中选择一个联系人或群聊
-                  </p>
-                </div>
-              </div>
-            </ResizablePanel>
-          </ResizablePanelGroup>
+          <Outlet />
         </div>
       </SidebarProvider>
     </TooltipProvider>
