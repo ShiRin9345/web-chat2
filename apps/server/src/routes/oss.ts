@@ -1,5 +1,5 @@
 import express from "express";
-import { STS } from "ali-oss";
+import OSS from "ali-oss";
 import { config } from "dotenv";
 
 config({ path: ".env.local" });
@@ -7,7 +7,7 @@ config({ path: ".env.local" });
 export const ossRouter = express.Router();
 
 ossRouter.get("/get_sts_token_for_oss_upload", (_req, res) => {
-  const sts = new STS({
+  const sts = new OSS.STS({
     accessKeyId: process.env.ALI_OSS_ACCESS_KEY_ID!,
     accessKeySecret: process.env.ALI_OSS_ACCESS_KEY_SECRET!,
   });
