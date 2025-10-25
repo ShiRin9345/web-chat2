@@ -4,6 +4,18 @@ import { eq, and, or, like, ne } from "drizzle-orm";
 import { authenticateUser } from "../middleware/auth.ts";
 const router = Router();
 
+// 获取用户的好友ID列表（用于在线状态广播）
+export async function getUserFriendIds(userId: string): Promise<string[]> {
+  const friends = await db
+    .select({ friendId: friendships.friendId })
+    .from(friendships)
+    .where(
+      and(eq(friendships.userId, userId), eq(friendships.status, "accepted"))
+    );
+
+  return friends.map((f) => f.friendId);
+}
+
 // 获取好友列表
 router.get("/", authenticateUser, async (req, res) => {
   try {

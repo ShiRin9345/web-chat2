@@ -6,8 +6,9 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import { auth } from "./auth.ts";
 import { ossRouter } from "./routes/oss.ts";
-import { friendsRouter } from "./routes/friends.ts";
+import { friendsRouter, getUserFriendIds } from "./routes/friends.ts";
 import { groupsRouter } from "./routes/groups.ts";
+import { onlineUserService } from "./services/onlineUsers.ts";
 config({ path: ".env.local" });
 
 const app = express();
@@ -47,9 +48,30 @@ io.on("connection", (socket) => {
   console.log("用户连接:", socket.id);
 
   // 用户上线
-  socket.on("user:online", (userId) => {
+  socket.on("user:online", async (userId) => {
     console.log("用户上线:", userId);
     socket.join(`user:${userId}`);
+
+    // 存储用户ID到socket中
+    socket.data = { userId };
+
+    // 添加到在线用户服务
+    onlineUserService.addUser(userId, socket.id);
+
+    // 获取该用户的所有好友
+    try {
+      const friendIds = await getUserFriendIds(userId);
+
+      // 通知所有在线好友该用户上线
+      for (const friendId of friendIds) {
+        const friendSocketId = onlineUserService.getSocketId(friendId);
+        if (friendSocketId) {
+          io.to(friendSocketId).emit("friend:online", userId);
+        }
+      }
+    } catch (error) {
+      console.error("获取好友列表失败:", error);
+    }
   });
 
   // 发送消息
@@ -76,9 +98,49 @@ io.on("connection", (socket) => {
     io.to(`user:${data.toUserId}`).emit("friend:request:new", data);
   });
 
+  // 获取在线好友状态
+  socket.on("user:get-online-friends", async (callback) => {
+    try {
+      // 这里需要从 socket 中获取当前用户ID，暂时使用一个占位符
+      // 在实际应用中，应该在连接时存储用户ID到socket
+      const userId = socket.data?.userId; // 需要在前端连接时传递
+      if (!userId) {
+        callback([]);
+        return;
+      }
+
+      const friendIds = await getUserFriendIds(userId);
+      const onlineFriendIds = onlineUserService.getOnlineFriends(friendIds);
+      callback(onlineFriendIds);
+    } catch (error) {
+      console.error("获取在线好友失败:", error);
+      callback([]);
+    }
+  });
+
   // 用户断开连接
-  socket.on("disconnect", () => {
+  socket.on("disconnect", async () => {
     console.log("用户断开连接:", socket.id);
+
+    // 从在线用户服务中移除用户
+    const userId = onlineUserService.removeUserBySocketId(socket.id);
+
+    if (userId) {
+      // 获取该用户的所有好友
+      try {
+        const friendIds = await getUserFriendIds(userId);
+
+        // 通知所有在线好友该用户下线
+        for (const friendId of friendIds) {
+          const friendSocketId = onlineUserService.getSocketId(friendId);
+          if (friendSocketId) {
+            io.to(friendSocketId).emit("friend:offline", userId);
+          }
+        }
+      } catch (error) {
+        console.error("获取好友列表失败:", error);
+      }
+    }
   });
 });
 

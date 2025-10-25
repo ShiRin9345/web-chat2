@@ -18,6 +18,7 @@ import { UserPlus, Users, Loader2, Bell, Search } from "lucide-react";
 import { useFriends, useFriendRequests } from "@/queries/friends";
 import { useGroups } from "@/queries/groups";
 import { useDialogStore } from "@/stores/dialog";
+import { OnlineStatusIndicator } from "@/components/OnlineStatusIndicator";
 
 export const Route = createFileRoute("/_authenticated/contacts")({
   component: ContactsPage,
@@ -35,12 +36,18 @@ function ContactsPage() {
 
   // 处理点击好友
   const handleContactClick = (contactId: string) => {
-    navigate({ to: "/messages/$chatId", params: { chatId: `friend-${contactId}` } });
+    navigate({
+      to: "/messages/$chatId",
+      params: { chatId: `friend-${contactId}` },
+    });
   };
 
   // 处理点击群组
   const handleGroupClick = (groupId: string) => {
-    navigate({ to: "/messages/$chatId", params: { chatId: `group-${groupId}` } });
+    navigate({
+      to: "/messages/$chatId",
+      params: { chatId: `group-${groupId}` },
+    });
   };
 
   // 过滤好友
@@ -125,14 +132,20 @@ function ContactsPage() {
                                 className="block p-3 rounded-lg hover:bg-accent transition-colors cursor-pointer"
                               >
                                 <div className="flex items-center space-x-3">
-                                  <Avatar className="h-10 w-10">
-                                    <AvatarImage
-                                      src={contact.image || undefined}
+                                  <div className="relative">
+                                    <Avatar className="h-10 w-10">
+                                      <AvatarImage
+                                        src={contact.image || undefined}
+                                      />
+                                      <AvatarFallback>
+                                        {contact.name.charAt(0)}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <OnlineStatusIndicator
+                                      userId={contact.id}
+                                      className="absolute -bottom-0.5 -right-0.5"
                                     />
-                                    <AvatarFallback>
-                                      {contact.name.charAt(0)}
-                                    </AvatarFallback>
-                                  </Avatar>
+                                  </div>
 
                                   <div className="flex-1 min-w-0">
                                     <h4 className="text-sm font-medium truncate">
