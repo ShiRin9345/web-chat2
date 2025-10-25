@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db, friendships, friendRequests, user } from "@workspace/database";
 import { eq, and, or, like, ne } from "drizzle-orm";
-import { authenticateUser } from "../middleware/auth.ts";
+import { authenticateUser } from "@/middleware/auth.ts";
 const router = Router();
 
 // 获取用户的好友ID列表（用于在线状态广播）

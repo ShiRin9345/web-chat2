@@ -22,7 +22,7 @@ import { MessageSquare, Users, Settings } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { useNavigate } from "@tanstack/react-router";
 import { UserProfilePopover } from "@/components/UserProfilePopover";
-import { DialogProvider } from "@/provider/DialogProvider";
+import { DialogProvider } from "@/providers/DialogProvider";
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async ({ context }) => {

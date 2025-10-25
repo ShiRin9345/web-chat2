@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db, groups, groupMembers, user } from "@workspace/database";
 import { eq, and } from "drizzle-orm";
-import { authenticateUser } from "../middleware/auth.ts";
+import { authenticateUser } from "@/middleware/auth.ts";
 
 const router = Router();
 

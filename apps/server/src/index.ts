@@ -4,11 +4,11 @@ import { config } from "dotenv";
 import { toNodeHandler } from "better-auth/node";
 import { createServer } from "http";
 import { Server } from "socket.io";
-import { auth } from "./auth.ts";
-import { ossRouter } from "./routes/oss.ts";
-import { friendsRouter, getUserFriendIds } from "./routes/friends.ts";
-import { groupsRouter } from "./routes/groups.ts";
-import { onlineUserService } from "./services/onlineUsers.ts";
+import { auth } from "@/auth.ts";
+import { ossRouter } from "@/routes/oss.ts";
+import { friendsRouter, getUserFriendIds } from "@/routes/friends.ts";
+import { groupsRouter } from "@/routes/groups.ts";
+import { onlineUserService } from "@/services/onlineUsers.ts";
 config({ path: ".env.local" });
 
 const app = express();

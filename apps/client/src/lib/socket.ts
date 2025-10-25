@@ -1,5 +1,5 @@
 import { io, Socket } from "socket.io-client";
-import { authClient } from "./auth-client";
+import { authClient } from "@/lib/auth-client";
 import { useEffect, useState } from "react";
 
 export const socket = io("http://localhost:3001", {
