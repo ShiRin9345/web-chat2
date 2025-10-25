@@ -53,6 +53,7 @@ export function useWebRTC({
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const iceCandidatesQueueRef = useRef<RTCIceCandidateInit[]>([]);
   const isConnectedRef = useRef(false); // 跟踪是否已连接
+  const localStreamRef = useRef<MediaStream | null>(null); // 保存最新的 localStream 引用
 
   // 更新连接状态
   const updateConnectionState = useCallback(
@@ -79,6 +80,7 @@ export function useWebRTC({
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       setLocalStream(stream);
+      localStreamRef.current = stream; // 同步更新 ref
       return stream;
     } catch (err) {
       console.error("获取媒体设备失败:", err);
@@ -237,35 +239,53 @@ export function useWebRTC({
 
   // 切换音频
   const toggleAudio = useCallback(() => {
-    if (localStream) {
-      const audioTrack = localStream.getAudioTracks()[0];
+    if (localStreamRef.current) {
+      const audioTrack = localStreamRef.current.getAudioTracks()[0];
       if (audioTrack) {
         audioTrack.enabled = !audioTrack.enabled;
         setIsAudioEnabled(audioTrack.enabled);
+        console.log("🎤 音频状态:", audioTrack.enabled ? "开启" : "关闭");
       }
     }
-  }, [localStream]);
+  }, []);
 
   // 切换视频
   const toggleVideo = useCallback(() => {
-    if (localStream && callType === "video") {
-      const videoTrack = localStream.getVideoTracks()[0];
+    if (localStreamRef.current && callType === "video") {
+      const videoTrack = localStreamRef.current.getVideoTracks()[0];
       if (videoTrack) {
         videoTrack.enabled = !videoTrack.enabled;
         setIsVideoEnabled(videoTrack.enabled);
+        console.log("📹 视频状态:", videoTrack.enabled ? "开启" : "关闭");
       }
     }
-  }, [localStream, callType]);
+  }, [callType]);
 
   // 结束通话
   const endCall = useCallback(() => {
-    // 停止所有媒体轨道
-    if (localStream) {
-      localStream.getTracks().forEach((track) => track.stop());
+    console.log("📞 结束通话，清理资源...");
+
+    // 使用 ref 获取最新的 localStream
+    if (localStreamRef.current) {
+      console.log(
+        "🛑 停止本地媒体流，轨道数量:",
+        localStreamRef.current.getTracks().length
+      );
+      localStreamRef.current.getTracks().forEach((track) => {
+        console.log(
+          `  - 停止轨道: ${track.kind}, enabled: ${track.enabled}, readyState: ${track.readyState}`
+        );
+        track.stop();
+        console.log(`  - 轨道已停止, readyState: ${track.readyState}`);
+      });
+      localStreamRef.current = null; // 清空引用
+    } else {
+      console.warn("⚠️ 没有找到本地媒体流");
     }
 
     // 关闭 PeerConnection
     if (peerConnectionRef.current) {
+      console.log("🔌 关闭 PeerConnection");
       peerConnectionRef.current.close();
       peerConnectionRef.current = null;
     }
@@ -277,14 +297,13 @@ export function useWebRTC({
         userId,
         recordId,
         endReason: "hangup",
-        targetUserId: friendId, // 添加目标用户ID
+        targetUserId: friendId,
       });
     }
 
     updateConnectionState("ended");
     onCallEnded?.();
   }, [
-    localStream,
     socket,
     roomId,
     userId,
@@ -342,7 +361,7 @@ export function useWebRTC({
 
     // 监听浏览器标签页关闭/刷新事件
     const handleBeforeUnload = () => {
-      console.log("检测到标签页即将关闭，发送结束通话信令");
+      console.log("🚪 检测到标签页即将关闭，发送结束通话信令");
       // 立即通知对方通话结束
       if (socket && recordId) {
         socket.emit("call:end", {
@@ -350,12 +369,14 @@ export function useWebRTC({
           userId,
           recordId,
           endReason: "cancelled",
-          targetUserId: friendId, // 添加目标用户ID
+          targetUserId: friendId,
         });
       }
       // 停止所有媒体轨道
-      if (localStream) {
-        localStream.getTracks().forEach((track) => track.stop());
+      if (localStreamRef.current) {
+        console.log("🛑 beforeunload: 停止本地媒体流");
+        localStreamRef.current.getTracks().forEach((track) => track.stop());
+        localStreamRef.current = null;
       }
       // 关闭 PeerConnection
       if (peerConnectionRef.current) {
@@ -367,11 +388,21 @@ export function useWebRTC({
 
     // 清理函数
     return () => {
+      console.log("🧹 useEffect 清理函数执行");
       window.removeEventListener("beforeunload", handleBeforeUnload);
-      if (localStream) {
-        localStream.getTracks().forEach((track) => track.stop());
+
+      // 使用 ref 清理最新的 localStream
+      if (localStreamRef.current) {
+        console.log("🛑 cleanup: 停止本地媒体流");
+        localStreamRef.current.getTracks().forEach((track) => {
+          console.log(`  - 停止轨道: ${track.kind}`);
+          track.stop();
+        });
+        localStreamRef.current = null;
       }
+
       if (peerConnectionRef.current) {
+        console.log("🔌 cleanup: 关闭 PeerConnection");
         peerConnectionRef.current.close();
       }
     };
