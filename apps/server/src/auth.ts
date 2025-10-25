@@ -71,7 +71,6 @@ export const auth = betterAuth({
         };
       }
 
-      // 如果查询失败，返回原始数据
       return {
         user: {
           ...user,

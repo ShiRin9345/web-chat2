@@ -19,7 +19,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu";
-import { LogOut, Settings, Copy } from "lucide-react";
+import { LogOut, Settings, Copy, Check } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { useDialogStore } from "@/stores/dialog";
 
@@ -32,6 +32,7 @@ export function UserProfilePopover({ children }: UserProfilePopoverProps) {
   const { data: session } = authClient.useSession();
   const { openDialog } = useDialogStore();
   const [isOpen, setIsOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const handleSignOut = async () => {
     await authClient.signOut();
@@ -109,15 +110,25 @@ export function UserProfilePopover({ children }: UserProfilePopoverProps) {
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={() => {
-                      navigator.clipboard.writeText(
-                        (session?.user as any)?.code
-                      );
-                      // 可以添加 toast 提示
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(
+                          (session?.user as any)?.code
+                        );
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 2000);
+                      } catch (err) {
+                        console.error("Failed to copy:", err);
+                      }
                     }}
                     className="h-6 w-6 p-0"
+                    title={copied ? "已复制!" : "复制账号"}
                   >
-                    <Copy className="h-3 w-3" />
+                    {copied ? (
+                      <Check className="h-3 w-3 text-green-500" />
+                    ) : (
+                      <Copy className="h-3 w-3" />
+                    )}
                   </Button>
                 </div>
               </div>
