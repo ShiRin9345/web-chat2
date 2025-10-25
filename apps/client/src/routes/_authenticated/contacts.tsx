@@ -35,12 +35,12 @@ function ContactsPage() {
 
   // 处理点击好友
   const handleContactClick = (contactId: string) => {
-    navigate({ to: "/messages/$chatId", params: { chatId: contactId } });
+    navigate({ to: "/messages/$chatId", params: { chatId: `friend-${contactId}` } });
   };
 
   // 处理点击群组
   const handleGroupClick = (groupId: string) => {
-    navigate({ to: "/messages/$chatId", params: { chatId: groupId } });
+    navigate({ to: "/messages/$chatId", params: { chatId: `group-${groupId}` } });
   };
 
   // 过滤好友
