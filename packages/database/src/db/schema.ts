@@ -5,6 +5,7 @@ import {
   boolean,
   uuid,
   varchar,
+  integer,
 } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
@@ -132,6 +133,27 @@ export const friendRequests = pgTable("friend_request", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const callRecords = pgTable("call_record", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  roomId: text("room_id").notNull(),
+  callerId: text("caller_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  receiverId: text("receiver_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  callType: text("call_type").notNull(), // 'video' | 'audio'
+  status: text("status").notNull(), // 'completed' | 'missed' | 'rejected' | 'cancelled'
+  duration: integer("duration").default(0).notNull(), // 通话时长（秒）
+  startedAt: timestamp("started_at"), // 实际接通时间
+  endedAt: timestamp("ended_at"), // 通话结束时间
+  createdAt: timestamp("created_at").defaultNow().notNull(), // 请求发起时间
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .notNull(),
+});
+
 export type User = typeof user.$inferSelect;
 export type Session = typeof session.$inferSelect;
 export type Account = typeof account.$inferSelect;
@@ -141,3 +163,4 @@ export type Group = typeof groups.$inferSelect;
 export type GroupMember = typeof groupMembers.$inferSelect;
 export type Message = typeof messages.$inferSelect;
 export type FriendRequest = typeof friendRequests.$inferSelect;
+export type CallRecord = typeof callRecords.$inferSelect;

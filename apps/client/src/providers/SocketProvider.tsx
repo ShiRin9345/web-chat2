@@ -85,3 +85,6 @@ export const useSocketContext = () => {
   }
   return context;
 };
+
+// 导出 socket 实例
+export const useSocket = () => socket;

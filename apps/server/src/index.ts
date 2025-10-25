@@ -8,7 +8,13 @@ import { auth } from "@/auth.ts";
 import { ossRouter } from "@/routes/oss.ts";
 import { friendsRouter, getUserFriendIds } from "@/routes/friends.ts";
 import { groupsRouter } from "@/routes/groups.ts";
+import { callsRouter } from "@/routes/calls.ts";
 import { onlineUserService } from "@/services/onlineUsers.ts";
+import {
+  createCallRecord,
+  updateCallRecord,
+  validateFriendship,
+} from "@/services/callRecords.ts";
 config({ path: ".env.local" });
 
 const app = express();
@@ -38,6 +44,7 @@ app.use(express.json());
 app.use("/api/oss", ossRouter);
 app.use("/api/friends", friendsRouter);
 app.use("/api/groups", groupsRouter);
+app.use("/api/calls", callsRouter);
 
 app.get("/check", (_req, res) => {
   res.send("Hello World");
@@ -142,6 +149,231 @@ io.on("connection", (socket) => {
       }
     }
   });
+
+  // ========== 通话相关事件 ==========
+
+  // 发起通话请求
+  socket.on(
+    "call:request",
+    async (data: {
+      roomId: string;
+      fromUserId: string;
+      toUserId: string;
+      callType: "video" | "audio";
+    }) => {
+      console.log("收到通话请求:", data);
+      const { roomId, fromUserId, toUserId, callType } = data;
+
+      try {
+        // 验证好友关系
+        const isFriend = await validateFriendship(fromUserId, toUserId);
+        if (!isFriend) {
+          socket.emit("call:error", { message: "仅支持与好友进行通话" });
+          return;
+        }
+
+        // 检查对方是否在线
+        const receiverSocketId = onlineUserService.getSocketId(toUserId);
+        if (!receiverSocketId) {
+          socket.emit("call:error", { message: "对方当前不在线" });
+          return;
+        }
+
+        // 创建通话记录
+        const record = await createCallRecord({
+          roomId,
+          callerId: fromUserId,
+          receiverId: toUserId,
+          callType,
+        });
+
+        if (!record) {
+          socket.emit("call:error", { message: "创建通话记录失败" });
+          return;
+        }
+
+        // 返回记录ID给双方
+        socket.emit("call:record-created", { recordId: record.id });
+
+        // 推送来电通知给接收方
+        io.to(receiverSocketId).emit("call:incoming", {
+          roomId,
+          fromUserId,
+          callType,
+          recordId: record.id,
+        });
+      } catch (error) {
+        console.error("创建通话记录失败:", error);
+        socket.emit("call:error", { message: "发起通话失败" });
+      }
+    }
+  );
+
+  // 接受通话
+  socket.on(
+    "call:accept",
+    (data: { roomId: string; userId: string; recordId: string }) => {
+      console.log("接受通话:", data);
+      const { roomId, userId, recordId } = data;
+
+      // 加入房间
+      socket.join(roomId);
+
+      // 通知对方已接受
+      socket.to(roomId).emit("call:accepted", { userId, recordId });
+    }
+  );
+
+  // 拒绝通话
+  socket.on(
+    "call:reject",
+    async (data: { roomId: string; userId: string; recordId: string }) => {
+      console.log("拒绝通话:", data);
+      const { roomId, userId, recordId } = data;
+
+      try {
+        // 更新通话记录
+        await updateCallRecord({
+          recordId,
+          status: "rejected",
+          endedAt: new Date(),
+        });
+
+        // 通知对方已拒绝
+        socket.to(roomId).emit("call:rejected", { userId });
+      } catch (error) {
+        console.error("更新通话记录失败:", error);
+      }
+    }
+  );
+
+  // 通话已连接（WebRTC 建立成功）
+  socket.on(
+    "call:connected",
+    async (data: { recordId: string; userId: string }) => {
+      console.log("通话已连接:", data);
+      const { recordId } = data;
+
+      try {
+        // 更新通话记录
+        await updateCallRecord({
+          recordId,
+          startedAt: new Date(),
+        });
+      } catch (error) {
+        console.error("更新通话记录失败:", error);
+      }
+    }
+  );
+
+  // 结束通话
+  socket.on(
+    "call:end",
+    async (data: {
+      roomId: string;
+      userId: string;
+      recordId: string;
+      duration?: number;
+      endReason: "hangup" | "rejected" | "timeout" | "cancelled";
+    }) => {
+      console.log("结束通话:", data);
+      const { roomId, userId, recordId, duration, endReason } = data;
+
+      try {
+        // 确定状态
+        let status: "completed" | "missed" | "rejected" | "cancelled";
+        switch (endReason) {
+          case "hangup":
+            status = "completed";
+            break;
+          case "rejected":
+            status = "rejected";
+            break;
+          case "timeout":
+            status = "missed";
+            break;
+          case "cancelled":
+            status = "cancelled";
+            break;
+          default:
+            status = "completed";
+        }
+
+        // 更新通话记录
+        await updateCallRecord({
+          recordId,
+          status,
+          endedAt: new Date(),
+          duration: duration || 0,
+        });
+
+        // 通知对方通话已结束
+        socket.to(roomId).emit("call:ended", { userId });
+
+        // 离开房间
+        socket.leave(roomId);
+      } catch (error) {
+        console.error("更新通话记录失败:", error);
+      }
+    }
+  );
+
+  // WebRTC 信令 - Offer
+  socket.on(
+    "webrtc:offer",
+    (data: { roomId: string; offer: RTCSessionDescriptionInit; targetUserId: string }) => {
+      console.log("转发 WebRTC Offer");
+      const { roomId, offer, targetUserId } = data;
+      const fromUserId = socket.data?.userId;
+
+      // 转发给目标用户
+      const targetSocketId = onlineUserService.getSocketId(targetUserId);
+      if (targetSocketId) {
+        io.to(targetSocketId).emit("webrtc:receive-offer", {
+          offer,
+          fromUserId,
+        });
+      }
+    }
+  );
+
+  // WebRTC 信令 - Answer
+  socket.on(
+    "webrtc:answer",
+    (data: { roomId: string; answer: RTCSessionDescriptionInit; targetUserId: string }) => {
+      console.log("转发 WebRTC Answer");
+      const { roomId, answer, targetUserId } = data;
+      const fromUserId = socket.data?.userId;
+
+      // 转发给目标用户
+      const targetSocketId = onlineUserService.getSocketId(targetUserId);
+      if (targetSocketId) {
+        io.to(targetSocketId).emit("webrtc:receive-answer", {
+          answer,
+          fromUserId,
+        });
+      }
+    }
+  );
+
+  // WebRTC 信令 - ICE Candidate
+  socket.on(
+    "webrtc:ice-candidate",
+    (data: { roomId: string; candidate: RTCIceCandidateInit; targetUserId: string }) => {
+      console.log("转发 ICE Candidate");
+      const { roomId, candidate, targetUserId } = data;
+      const fromUserId = socket.data?.userId;
+
+      // 转发给目标用户
+      const targetSocketId = onlineUserService.getSocketId(targetUserId);
+      if (targetSocketId) {
+        io.to(targetSocketId).emit("webrtc:receive-ice", {
+          candidate,
+          fromUserId,
+        });
+      }
+    }
+  );
 });
 
 httpServer.listen(PORT, () => {
