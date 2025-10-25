@@ -18,8 +18,8 @@ import { Badge } from "@workspace/ui/components/badge";
 import { Checkbox } from "@workspace/ui/components/checkbox";
 import { ScrollArea } from "@workspace/ui/components/scroll-area";
 import { Loader2, Users, UserPlus } from "lucide-react";
-import { useFriends } from "../queries/friends.ts";
-import { useCreateGroup } from "../queries/groups.ts";
+import { useFriends } from "../../queries/friends.ts";
+import { useCreateGroup } from "../../queries/groups.ts";
 
 interface CreateGroupDialogProps {
   open: boolean;
@@ -151,10 +151,7 @@ export function CreateGroupDialog({
               )}
               创建群聊
             </Button>
-            <Button
-              variant="outline"
-              onClick={() => setCreateGroupDialog(false)}
-            >
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
               取消
             </Button>
           </div>

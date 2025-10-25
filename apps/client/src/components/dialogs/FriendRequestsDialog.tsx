@@ -19,7 +19,7 @@ import {
   useFriendRequests,
   useAcceptFriendRequest,
   useRejectFriendRequest,
-} from "../queries/friends.ts";
+} from "../../queries/friends.ts";
 
 interface FriendRequestsDialogProps {
   open: boolean;

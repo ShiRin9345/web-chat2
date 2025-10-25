@@ -14,7 +14,7 @@ import { ScrollArea } from "@workspace/ui/components/scroll-area";
 import { Input } from "@workspace/ui/components/input";
 import { Button } from "@workspace/ui/components/button";
 import { Plus, Loader2, MessageSquare } from "lucide-react";
-import { useFriends, useFriendRequests } from "../../queries/friends.ts";
+import { useFriends } from "../../queries/friends.ts";
 import { useGroups } from "../../queries/groups.ts";
 import { useDialogStore } from "../../stores/dialog.ts";
 

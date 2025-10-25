@@ -18,7 +18,7 @@ import {
 } from "@workspace/ui/components/avatar";
 import { Badge } from "@workspace/ui/components/badge";
 import { Loader2, Search, UserPlus } from "lucide-react";
-import { useSearchUsers, useSendFriendRequest } from "../queries/friends.ts";
+import { useSearchUsers, useSendFriendRequest } from "../../queries/friends.ts";
 
 interface AddFriendDialogProps {
   open: boolean;
