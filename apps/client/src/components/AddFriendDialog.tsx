@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useDebounce } from "use-debounce";
 import {
   Dialog,
   DialogContent,
@@ -29,15 +30,16 @@ export function AddFriendDialog({ open, onOpenChange }: AddFriendDialogProps) {
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [message, setMessage] = useState("");
 
+  // 使用防抖，延迟 500ms
+  const [debouncedSearchQuery] = useDebounce(searchQuery, 500);
+
   const { data: searchResults, isLoading: isSearching } =
-    useSearchUsers(searchQuery);
+    useSearchUsers(debouncedSearchQuery);
   const sendFriendRequest = useSendFriendRequest();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      // 搜索逻辑由 useSearchUsers 自动处理
-    }
+    // 搜索现在通过防抖自动触发，这里可以添加其他逻辑
   };
 
   const handleSendRequest = async () => {
@@ -95,42 +97,44 @@ export function AddFriendDialog({ open, onOpenChange }: AddFriendDialogProps) {
           </form>
 
           {/* 搜索结果 */}
-          {searchResults && searchResults.length > 0 && (
-            <div className="space-y-2">
-              <Label>搜索结果</Label>
-              <div className="space-y-2 max-h-32 overflow-y-auto">
-                {searchResults.map((user: any) => (
-                  <div
-                    key={user.id}
-                    className={`flex items-center space-x-3 p-2 rounded-lg border cursor-pointer transition-colors ${
-                      selectedUser?.id === user.id
-                        ? "bg-primary/10 border-primary"
-                        : "hover:bg-muted"
-                    }`}
-                    onClick={() => setSelectedUser(user)}
-                  >
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={user.image} />
-                      <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {user.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {user.email}
-                      </p>
+          {debouncedSearchQuery &&
+            searchResults &&
+            searchResults.length > 0 && (
+              <div className="space-y-2">
+                <Label>搜索结果</Label>
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {searchResults.map((user: any) => (
+                    <div
+                      key={user.id}
+                      className={`flex items-center space-x-3 p-2 rounded-lg border cursor-pointer transition-colors ${
+                        selectedUser?.id === user.id
+                          ? "bg-primary/10 border-primary"
+                          : "hover:bg-muted"
+                      }`}
+                      onClick={() => setSelectedUser(user)}
+                    >
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={user.image} />
+                        <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {user.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {user.email}
+                        </p>
+                      </div>
+                      {selectedUser?.id === user.id && (
+                        <Badge variant="default" className="text-xs">
+                          已选择
+                        </Badge>
+                      )}
                     </div>
-                    {selectedUser?.id === user.id && (
-                      <Badge variant="default" className="text-xs">
-                        已选择
-                      </Badge>
-                    )}
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
           {/* 选择用户后的操作 */}
           {selectedUser && (
@@ -180,12 +184,14 @@ export function AddFriendDialog({ open, onOpenChange }: AddFriendDialogProps) {
           )}
 
           {/* 无搜索结果 */}
-          {searchQuery && searchResults && searchResults.length === 0 && (
-            <div className="text-center py-4 text-muted-foreground">
-              <p>未找到用户</p>
-              <p className="text-xs">请检查邮箱或用户 ID 是否正确</p>
-            </div>
-          )}
+          {debouncedSearchQuery &&
+            searchResults &&
+            searchResults.length === 0 && (
+              <div className="text-center py-4 text-muted-foreground">
+                <p>未找到用户</p>
+                <p className="text-xs">请检查邮箱或用户 ID 是否正确</p>
+              </div>
+            )}
         </div>
       </DialogContent>
     </Dialog>
