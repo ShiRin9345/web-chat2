@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { FriendRequest, User } from "@workspace/database";
 import {
   Dialog,
   DialogContent,
@@ -19,7 +20,7 @@ import {
   useFriendRequests,
   useAcceptFriendRequest,
   useRejectFriendRequest,
-} from "../../queries/friends.ts";
+} from "@/queries/friends";
 
 interface FriendRequestsDialogProps {
   open: boolean;
@@ -94,7 +95,7 @@ export function FriendRequestsDialog({
             </div>
           ) : requests && requests.length > 0 ? (
             <div className="space-y-3">
-              {requests.map((request: any) => (
+              {requests.map((request: FriendRequest & { fromUser?: User }) => (
                 <div
                   key={request.id}
                   className="flex items-start space-x-3 p-3 border rounded-lg"

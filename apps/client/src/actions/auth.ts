@@ -1,4 +1,4 @@
-import { authClient } from "../lib/auth-client";
+import { authClient } from "@/lib/auth-client";
 
 export async function signUpAction(
   _prevState: { error?: string },

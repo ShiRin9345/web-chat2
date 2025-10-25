@@ -1,6 +1,5 @@
 import { Router } from "express";
-import { db } from "../db/index.ts";
-import { friendships, friendRequests, user } from "../db/schema.ts";
+import { db, friendships, friendRequests, user } from "@workspace/database";
 import { eq, and, or } from "drizzle-orm";
 import { authenticateUser } from "../middleware/auth.ts";
 const router = Router();

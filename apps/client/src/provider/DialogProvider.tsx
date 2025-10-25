@@ -1,8 +1,8 @@
 import { useDialogStore } from "@/stores/dialog";
-import { EditProfileDialog } from "../components/dialogs/EditProfileDialog";
-import { AddFriendDialog } from "../components/dialogs/AddFriendDialog";
-import { FriendRequestsDialog } from "../components/dialogs/FriendRequestsDialog";
-import { CreateGroupDialog } from "../components/dialogs/CreateGroupDialog";
+import { EditProfileDialog } from "@/components/dialogs/EditProfileDialog";
+import { AddFriendDialog } from "@/components/dialogs/AddFriendDialog";
+import { FriendRequestsDialog } from "@/components/dialogs/FriendRequestsDialog";
+import { CreateGroupDialog } from "@/components/dialogs/CreateGroupDialog";
 
 export function DialogProvider() {
   const { dialogType, isOpen, closeDialog } = useDialogStore();

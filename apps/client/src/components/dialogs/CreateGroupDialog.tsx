@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { User } from "@workspace/database";
 import {
   Dialog,
   DialogContent,
@@ -18,8 +19,8 @@ import { Badge } from "@workspace/ui/components/badge";
 import { Checkbox } from "@workspace/ui/components/checkbox";
 import { ScrollArea } from "@workspace/ui/components/scroll-area";
 import { Loader2, Users, UserPlus } from "lucide-react";
-import { useFriends } from "../../queries/friends.ts";
-import { useCreateGroup } from "../../queries/groups.ts";
+import { useFriends } from "@/queries/friends";
+import { useCreateGroup } from "@/queries/groups";
 
 interface CreateGroupDialogProps {
   open: boolean;
@@ -102,7 +103,7 @@ export function CreateGroupDialog({
                 </div>
               ) : friends && friends.length > 0 ? (
                 <div className="space-y-2">
-                  {friends.map((friend: any) => (
+                  {friends.map((friend: User) => (
                     <div
                       key={friend.id}
                       className="flex items-center space-x-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer"

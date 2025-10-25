@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useDebounce } from "use-debounce";
+import type { User } from "@workspace/database";
 import {
   Dialog,
   DialogContent,
@@ -18,7 +19,7 @@ import {
 } from "@workspace/ui/components/avatar";
 import { Badge } from "@workspace/ui/components/badge";
 import { Loader2, Search, UserPlus } from "lucide-react";
-import { useSearchUsers, useSendFriendRequest } from "../../queries/friends.ts";
+import { useSearchUsers, useSendFriendRequest } from "@/queries/friends";
 
 interface AddFriendDialogProps {
   open: boolean;
@@ -27,7 +28,7 @@ interface AddFriendDialogProps {
 
 export function AddFriendDialog({ open, onOpenChange }: AddFriendDialogProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [message, setMessage] = useState("");
 
   // 使用防抖，延迟 500ms
@@ -103,7 +104,7 @@ export function AddFriendDialog({ open, onOpenChange }: AddFriendDialogProps) {
               <div className="space-y-2">
                 <Label>搜索结果</Label>
                 <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {searchResults.map((user: any) => (
+                  {searchResults.map((user: User) => (
                     <div
                       key={user.id}
                       className={`flex items-center space-x-3 p-2 rounded-lg border cursor-pointer transition-colors ${

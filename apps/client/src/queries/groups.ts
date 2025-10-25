@@ -1,11 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
+import type { Group, GroupMember } from "@workspace/database";
 
 const API_BASE = "http://localhost:3001/api";
 
 // 获取群聊列表
 export function useGroups() {
-  return useQuery({
+  return useQuery<Group[]>({
     queryKey: ["groups"],
     queryFn: async () => {
       const response = await axios.get(`${API_BASE}/groups`, {
@@ -68,7 +69,7 @@ export function useJoinGroup() {
 
 // 获取群成员列表
 export function useGroupMembers(groupId: string) {
-  return useQuery({
+  return useQuery<GroupMember[]>({
     queryKey: ["groupMembers", groupId],
     queryFn: async () => {
       const response = await axios.get(

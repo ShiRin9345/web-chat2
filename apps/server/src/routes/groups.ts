@@ -1,6 +1,5 @@
 import { Router } from "express";
-import { db } from "../db/index.ts";
-import { groups, groupMembers, user } from "../db/schema.ts";
+import { db, groups, groupMembers, user } from "@workspace/database";
 import { eq, and } from "drizzle-orm";
 import { authenticateUser } from "../middleware/auth.ts";
 

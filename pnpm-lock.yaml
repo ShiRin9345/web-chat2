@@ -41,6 +41,9 @@ importers:
       '@types/ali-oss':
         specifier: ^6.16.11
         version: 6.16.11
+      '@workspace/database':
+        specifier: workspace:*
+        version: link:../../packages/database
       '@workspace/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -111,6 +114,9 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^5.0.4
         version: 5.0.4(vite@7.1.12(@types/node@22.18.12)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.20.6))
+      '@workspace/typescript-config':
+        specifier: workspace:*
+        version: link:../../packages/typescript-config
       jsdom:
         specifier: ^27.0.0
         version: 27.0.1(postcss@8.5.6)
@@ -135,6 +141,9 @@ importers:
       '@types/ali-oss':
         specifier: ^6.16.11
         version: 6.16.11
+      '@workspace/database':
+        specifier: workspace:*
+        version: link:../../packages/database
       ali-oss:
         specifier: ^6.23.0
         version: 6.23.0
@@ -172,6 +181,9 @@ importers:
       '@types/pg':
         specifier: ^8.15.5
         version: 8.15.5
+      '@workspace/typescript-config':
+        specifier: workspace:*
+        version: link:../../packages/typescript-config
       drizzle-kit:
         specifier: ^0.31.5
         version: 0.31.5
@@ -181,6 +193,30 @@ importers:
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
+
+  packages/database:
+    dependencies:
+      dotenv:
+        specifier: ^16.6.1
+        version: 16.6.1
+      drizzle-orm:
+        specifier: ^0.44.7
+        version: 0.44.7(@types/pg@8.15.5)(kysely@0.28.8)(pg@8.16.3)
+      pg:
+        specifier: ^8.16.3
+        version: 8.16.3
+    devDependencies:
+      '@types/pg':
+        specifier: ^8.15.5
+        version: 8.15.5
+      '@workspace/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      drizzle-kit:
+        specifier: ^0.31.5
+        version: 0.31.5
+
+  packages/typescript-config: {}
 
   packages/ui:
     dependencies:
@@ -275,6 +311,9 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^5.0.4
         version: 5.0.4(vite@7.1.12(@types/node@24.9.1)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.20.6))
+      '@workspace/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
       eslint:
         specifier: ^9.36.0
         version: 9.38.0(jiti@2.6.1)

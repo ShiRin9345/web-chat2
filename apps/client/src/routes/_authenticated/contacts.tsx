@@ -14,9 +14,9 @@ import { ScrollArea } from "@workspace/ui/components/scroll-area";
 import { Input } from "@workspace/ui/components/input";
 import { Button } from "@workspace/ui/components/button";
 import { UserPlus, Users, Loader2, Bell } from "lucide-react";
-import { useFriends, useFriendRequests } from "../../queries/friends.ts";
-import { useGroups } from "../../queries/groups.ts";
-import { useDialogStore } from "../../stores/dialog.ts";
+import { useFriends, useFriendRequests } from "@/queries/friends";
+import { useGroups } from "@/queries/groups";
+import { useDialogStore } from "@/stores/dialog";
 
 export const Route = createFileRoute("/_authenticated/contacts")({
   component: ContactsPage,
@@ -156,7 +156,7 @@ function ContactsPage() {
                                       {group.name}
                                     </h4>
                                     <p className="text-xs text-muted-foreground">
-                                      {group.memberCount} 个成员
+                                      群聊
                                     </p>
                                   </div>
                                 </div>

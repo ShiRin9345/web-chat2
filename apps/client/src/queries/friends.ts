@@ -1,11 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
+import type { User, FriendRequest } from "@workspace/database";
 
 const API_BASE = "http://localhost:3001/api";
 
 // 获取好友列表
 export function useFriends() {
-  return useQuery({
+  return useQuery<User[]>({
     queryKey: ["friends"],
     queryFn: async () => {
       const response = await axios.get(`${API_BASE}/friends`, {
@@ -18,7 +19,7 @@ export function useFriends() {
 
 // 获取好友申请列表
 export function useFriendRequests() {
-  return useQuery({
+  return useQuery<FriendRequest[]>({
     queryKey: ["friendRequests"],
     queryFn: async () => {
       const response = await axios.get(`${API_BASE}/friends/requests`, {
@@ -31,7 +32,7 @@ export function useFriendRequests() {
 
 // 搜索用户
 export function useSearchUsers(searchQuery: string) {
-  return useQuery({
+  return useQuery<User[]>({
     queryKey: ["searchUsers", searchQuery],
     queryFn: async () => {
       const response = await axios.get(
