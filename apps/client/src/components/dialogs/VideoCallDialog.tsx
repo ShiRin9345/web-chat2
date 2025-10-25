@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Dialog, DialogContent, DialogTitle } from "@workspace/ui/components/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@workspace/ui/components/dialog";
 import { Button } from "@workspace/ui/components/button";
 import {
   Avatar,
@@ -8,7 +12,7 @@ import {
 } from "@workspace/ui/components/avatar";
 import { useWebRTC, type ConnectionState } from "@/hooks/useWebRTC";
 import { useDialogStore } from "@/stores/dialog";
-import { Phone, PhoneOff, Mic, MicOff, Video, VideoOff } from "lucide-react";
+import { PhoneOff, Mic, MicOff, Video, VideoOff } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 
 interface VideoCallDialogProps {
@@ -36,6 +40,7 @@ export function VideoCallDialog({
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement>(null); // 新增：语音通话用
 
   const [duration, setDuration] = useState(0);
   const [connectionStatus, setConnectionStatus] =
@@ -89,10 +94,18 @@ export function VideoCallDialog({
 
   // 设置远程视频流
   useEffect(() => {
-    if (remoteVideoRef.current && remoteStream) {
+    if (callType === "video" && remoteVideoRef.current && remoteStream) {
       remoteVideoRef.current.srcObject = remoteStream;
     }
-  }, [remoteStream]);
+  }, [remoteStream, callType]);
+
+  // 设置远程音频流（语音通话）
+  useEffect(() => {
+    if (callType === "audio" && remoteAudioRef.current && remoteStream) {
+      console.log("🔊 设置远程音频流");
+      remoteAudioRef.current.srcObject = remoteStream;
+    }
+  }, [remoteStream, callType]);
 
   // 清理计时器
   useEffect(() => {
@@ -146,7 +159,7 @@ export function VideoCallDialog({
         <DialogTitle className="sr-only">
           {callType === "video" ? "视频通话" : "语音通话"} - {friendName}
         </DialogTitle>
-        
+
         <div className="relative w-full h-full bg-gray-900">
           {/* 远程视频（主画面） */}
           {callType === "video" ? (
@@ -158,10 +171,18 @@ export function VideoCallDialog({
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
+              {/* 语音通话：显示头像 */}
               <Avatar className="w-32 h-32">
                 <AvatarImage src={friendAvatar} alt={friendName} />
                 <AvatarFallback>{friendName[0]}</AvatarFallback>
               </Avatar>
+              {/* 隐藏的 audio 元素用于播放远程音频 */}
+              <audio
+                ref={remoteAudioRef}
+                autoPlay
+                playsInline
+                className="hidden"
+              />
             </div>
           )}
 
@@ -240,16 +261,17 @@ export function VideoCallDialog({
           </div>
 
           {/* 错误提示 */}
-          {error && (connectionStatus === "error" || connectionStatus === "ended") && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/80">
-              <div className="text-center">
-                <p className="text-white text-lg mb-4">{error}</p>
-                <Button variant="secondary" onClick={handleEndCall}>
-                  关闭
-                </Button>
+          {error &&
+            (connectionStatus === "error" || connectionStatus === "ended") && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+                <div className="text-center">
+                  <p className="text-white text-lg mb-4">{error}</p>
+                  <Button variant="secondary" onClick={handleEndCall}>
+                    关闭
+                  </Button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
         </div>
 
         <style>
