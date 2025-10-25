@@ -32,7 +32,7 @@ function ChatPage() {
 
   // 解析 chatId 获取类型和实际 ID
   const isGroup = chatId.startsWith("group-");
-  const actualId = chatId.replace(/^(friend-|group-)/, "");
+  // const actualId = chatId.replace(/^(friend-|group-)/, "");
 
   // 暂时显示占位内容，不实现实际的消息功能
   const chatInfo = {

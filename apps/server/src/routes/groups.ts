@@ -8,7 +8,11 @@ const router = Router();
 // 获取我加入的群聊列表
 router.get("/", authenticateUser, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
 
     const userGroups = await db
       .select({
@@ -47,7 +51,11 @@ router.get("/", authenticateUser, async (req, res) => {
 // 创建群聊
 router.post("/", authenticateUser, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
     const { name, avatar, memberIds } = req.body;
 
     if (!name) {
@@ -64,6 +72,10 @@ router.post("/", authenticateUser, async (req, res) => {
       })
       .returning();
 
+    if (!newGroup) {
+      return res.status(500).json({ error: "Failed to create group" });
+    }
+
     // 添加创建者为管理员
     await db.insert(groupMembers).values({
       groupId: newGroup.id,
@@ -76,7 +88,7 @@ router.post("/", authenticateUser, async (req, res) => {
       const memberData = memberIds.map((memberId: string) => ({
         groupId: newGroup.id,
         userId: memberId,
-        role: "member",
+        role: "member" as const,
       }));
 
       await db.insert(groupMembers).values(memberData);
@@ -92,14 +104,22 @@ router.post("/", authenticateUser, async (req, res) => {
 // 加入群聊
 router.post("/:groupId/join", authenticateUser, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
     const { groupId } = req.params;
+
+    if (!groupId) {
+      return res.status(400).json({ error: "Group ID is required" });
+    }
 
     // 检查群聊是否存在
     const [group] = await db
       .select()
       .from(groups)
-      .where(eq(groups.id, groupId));
+      .where(eq(groups.id, groupId!));
 
     if (!group) {
       return res.status(404).json({ error: "Group not found" });
@@ -110,7 +130,10 @@ router.post("/:groupId/join", authenticateUser, async (req, res) => {
       .select()
       .from(groupMembers)
       .where(
-        and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId))
+        and(
+          eq(groupMembers.groupId, groupId!),
+          eq(groupMembers.userId, userId!)
+        )
       );
 
     if (existingMember) {
@@ -136,6 +159,10 @@ router.get("/:groupId/members", authenticateUser, async (req, res) => {
   try {
     const { groupId } = req.params;
 
+    if (!groupId) {
+      return res.status(400).json({ error: "Group ID is required" });
+    }
+
     const members = await db
       .select({
         id: user.id,
@@ -147,7 +174,7 @@ router.get("/:groupId/members", authenticateUser, async (req, res) => {
       })
       .from(groupMembers)
       .innerJoin(user, eq(groupMembers.userId, user.id))
-      .where(eq(groupMembers.groupId, groupId));
+      .where(eq(groupMembers.groupId, groupId!));
 
     res.json(members);
   } catch (error) {

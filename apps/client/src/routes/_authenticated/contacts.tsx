@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import {
   Avatar,
   AvatarFallback,
@@ -13,7 +14,7 @@ import {
 import { ScrollArea } from "@workspace/ui/components/scroll-area";
 import { Input } from "@workspace/ui/components/input";
 import { Button } from "@workspace/ui/components/button";
-import { UserPlus, Users, Loader2, Bell } from "lucide-react";
+import { UserPlus, Users, Loader2, Bell, Search } from "lucide-react";
 import { useFriends, useFriendRequests } from "@/queries/friends";
 import { useGroups } from "@/queries/groups";
 import { useDialogStore } from "@/stores/dialog";
@@ -27,8 +28,24 @@ function ContactsPage() {
   const { data: contacts, isLoading: isLoadingFriends } = useFriends();
   const { data: groups, isLoading: isLoadingGroups } = useGroups();
   const { data: friendRequests } = useFriendRequests();
+  const [searchQuery, setSearchQuery] = useState("");
 
   const pendingRequestsCount = friendRequests?.length || 0;
+
+  // 过滤好友
+  const filteredContacts = contacts?.filter((contact) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      contact.name.toLowerCase().includes(query) ||
+      contact.email.toLowerCase().includes(query) ||
+      (contact.code && contact.code.includes(query))
+    );
+  });
+
+  // 过滤群组
+  const filteredGroups = groups?.filter((group) =>
+    group.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <>
@@ -40,7 +57,15 @@ function ContactsPage() {
                 <h2 className="text-lg font-semibold mb-4">联系人</h2>
                 <div className="h-full flex flex-col gap-2">
                   <div className="flex gap-2">
-                    <Input placeholder="搜索联系人..." className="pl-10" />
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="搜索联系人..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
                     <div className="flex gap-1">
                       <Button
                         size="sm"
@@ -74,22 +99,24 @@ function ContactsPage() {
                       {/* 我的好友 */}
                       <div>
                         <h3 className="text-sm font-semibold text-muted-foreground mb-3">
-                          我的好友 ({contacts?.length || 0})
+                          我的好友 ({filteredContacts?.length || 0})
                         </h3>
                         {isLoadingFriends ? (
                           <div className="flex items-center justify-center py-4">
                             <Loader2 className="h-4 w-4 animate-spin" />
                           </div>
-                        ) : contacts && contacts.length > 0 ? (
+                        ) : filteredContacts && filteredContacts.length > 0 ? (
                           <div className="space-y-2">
-                            {contacts.map((contact) => (
+                            {filteredContacts.map((contact) => (
                               <div
                                 key={contact.id}
                                 className="block p-3 rounded-lg hover:bg-accent transition-colors cursor-pointer"
                               >
                                 <div className="flex items-center space-x-3">
                                   <Avatar className="h-10 w-10">
-                                    <AvatarImage src={contact.image} />
+                                    <AvatarImage
+                                      src={contact.image || undefined}
+                                    />
                                     <AvatarFallback>
                                       {contact.name.charAt(0)}
                                     </AvatarFallback>
@@ -120,7 +147,7 @@ function ContactsPage() {
                       <div>
                         <div className="flex items-center justify-between mb-3">
                           <h3 className="text-sm font-semibold text-muted-foreground">
-                            我的群聊 ({groups?.length || 0})
+                            我的群聊 ({filteredGroups?.length || 0})
                           </h3>
                           <Button
                             size="sm"
@@ -136,16 +163,18 @@ function ContactsPage() {
                           <div className="flex items-center justify-center py-4">
                             <Loader2 className="h-4 w-4 animate-spin" />
                           </div>
-                        ) : groups && groups.length > 0 ? (
+                        ) : filteredGroups && filteredGroups.length > 0 ? (
                           <div className="space-y-2">
-                            {groups.map((group) => (
+                            {filteredGroups.map((group) => (
                               <div
                                 key={group.id}
                                 className="block p-3 rounded-lg hover:bg-accent transition-colors cursor-pointer"
                               >
                                 <div className="flex items-center space-x-3">
                                   <Avatar className="h-10 w-10">
-                                    <AvatarImage src={group.avatar} />
+                                    <AvatarImage
+                                      src={group.avatar || undefined}
+                                    />
                                     <AvatarFallback>
                                       {group.name.charAt(0)}
                                     </AvatarFallback>

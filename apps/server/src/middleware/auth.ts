@@ -11,6 +11,7 @@ declare global {
         name: string;
         email: string;
         image?: string;
+        code?: string;
       };
     }
   }
@@ -37,6 +38,7 @@ export const authenticateUser = async (
       name: session.user.name,
       email: session.user.email,
       image: session.user.image || undefined,
+      code: (session.user as any).code,
     };
 
     next();

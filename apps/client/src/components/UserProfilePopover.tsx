@@ -19,7 +19,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu";
-import { LogOut, Settings } from "lucide-react";
+import { LogOut, Settings, Copy } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { useDialogStore } from "@/stores/dialog";
 
@@ -96,6 +96,33 @@ export function UserProfilePopover({ children }: UserProfilePopoverProps) {
               </p>
             </div>
           </div>
+
+          {/* 账号信息 */}
+          {(session?.user as any)?.code && (
+            <div className="mt-4 p-3 bg-muted/50 rounded-lg">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">账号</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-mono">
+                    {(session?.user as any)?.code}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      navigator.clipboard.writeText(
+                        (session?.user as any)?.code
+                      );
+                      // 可以添加 toast 提示
+                    }}
+                    className="h-6 w-6 p-0"
+                  >
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
 
           <Separator className="my-4" />
 

@@ -1,13 +1,17 @@
 import { Router } from "express";
 import { db, friendships, friendRequests, user } from "@workspace/database";
-import { eq, and, or } from "drizzle-orm";
+import { eq, and, or, like, ne } from "drizzle-orm";
 import { authenticateUser } from "../middleware/auth.ts";
 const router = Router();
 
 // 获取好友列表
 router.get("/", authenticateUser, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
 
     const friends = await db
       .select({
@@ -33,7 +37,11 @@ router.get("/", authenticateUser, async (req, res) => {
 // 获取好友申请列表
 router.get("/requests", authenticateUser, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
 
     const requests = await db
       .select({
@@ -53,7 +61,7 @@ router.get("/requests", authenticateUser, async (req, res) => {
       .innerJoin(user, eq(friendRequests.fromUserId, user.id))
       .where(
         and(
-          eq(friendRequests.toUserId, userId),
+          eq(friendRequests.toUserId, userId!),
           eq(friendRequests.status, "pending")
         )
       );
@@ -68,7 +76,11 @@ router.get("/requests", authenticateUser, async (req, res) => {
 // 发送好友申请
 router.post("/request", authenticateUser, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
     const { toUserId, message } = req.body;
 
     if (!toUserId) {
@@ -113,7 +125,7 @@ router.post("/request", authenticateUser, async (req, res) => {
         and(
           or(
             and(
-              eq(friendRequests.fromUserId, userId),
+              eq(friendRequests.fromUserId, userId!),
               eq(friendRequests.toUserId, toUserId)
             ),
             and(
@@ -150,8 +162,16 @@ router.post("/request", authenticateUser, async (req, res) => {
 // 接受好友申请
 router.post("/accept/:requestId", authenticateUser, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = req.user?.id;
     const { requestId } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
+
+    if (!requestId) {
+      return res.status(400).json({ error: "Request ID is required" });
+    }
 
     // 获取申请详情
     const [request] = await db
@@ -160,7 +180,7 @@ router.post("/accept/:requestId", authenticateUser, async (req, res) => {
       .where(
         and(
           eq(friendRequests.id, requestId),
-          eq(friendRequests.toUserId, userId),
+          eq(friendRequests.toUserId, userId!),
           eq(friendRequests.status, "pending")
         )
       );
@@ -199,8 +219,16 @@ router.post("/accept/:requestId", authenticateUser, async (req, res) => {
 // 拒绝好友申请
 router.post("/reject/:requestId", authenticateUser, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = req.user?.id;
     const { requestId } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
+
+    if (!requestId) {
+      return res.status(400).json({ error: "Request ID is required" });
+    }
 
     const [request] = await db
       .select()
@@ -208,7 +236,7 @@ router.post("/reject/:requestId", authenticateUser, async (req, res) => {
       .where(
         and(
           eq(friendRequests.id, requestId),
-          eq(friendRequests.toUserId, userId),
+          eq(friendRequests.toUserId, userId!),
           eq(friendRequests.status, "pending")
         )
       );
@@ -232,11 +260,14 @@ router.post("/reject/:requestId", authenticateUser, async (req, res) => {
 // 搜索用户
 router.get("/search", authenticateUser, async (req, res) => {
   try {
-    const { q } = req.query;
+    const { q: query } = req.query;
+    const userId = req.user?.id;
 
-    if (!q || typeof q !== "string") {
-      return res.status(400).json({ error: "Search query is required" });
+    if (!query || typeof query !== "string") {
+      return res.status(400).json({ message: "搜索关键词不能为空" });
     }
+
+    const searchPattern = `%${query}%`;
 
     const users = await db
       .select({
@@ -244,10 +275,20 @@ router.get("/search", authenticateUser, async (req, res) => {
         name: user.name,
         email: user.email,
         image: user.image,
+        code: user.code,
       })
       .from(user)
-      .where(or(eq(user.email, q), eq(user.id, q)))
-      .limit(10);
+      .where(
+        and(
+          or(
+            like(user.name, searchPattern),
+            like(user.email, searchPattern),
+            like(user.code, searchPattern)
+          ),
+          ne(user.id, userId!)
+        )
+      )
+      .limit(20);
 
     res.json(users);
   } catch (error) {

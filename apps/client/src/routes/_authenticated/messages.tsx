@@ -1,4 +1,5 @@
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
+import { useState } from "react";
 import {
   Avatar,
   AvatarFallback,
@@ -13,7 +14,7 @@ import {
 import { ScrollArea } from "@workspace/ui/components/scroll-area";
 import { Input } from "@workspace/ui/components/input";
 import { Button } from "@workspace/ui/components/button";
-import { Plus, Loader2, MessageSquare } from "lucide-react";
+import { Plus, Loader2, MessageSquare, Search } from "lucide-react";
 import { useFriends } from "@/queries/friends";
 import { useGroups } from "@/queries/groups";
 import { useDialogStore } from "@/stores/dialog";
@@ -26,6 +27,7 @@ function MessagesLayout() {
   const { openDialog } = useDialogStore();
   const { data: friends, isLoading: isLoadingFriends } = useFriends();
   const { data: groups, isLoading: isLoadingGroups } = useGroups();
+  const [searchQuery, setSearchQuery] = useState("");
 
   // 合并好友和群聊作为会话列表
   const conversations = [
@@ -51,6 +53,11 @@ function MessagesLayout() {
 
   const isLoading = isLoadingFriends || isLoadingGroups;
 
+  // 过滤会话
+  const filteredConversations = conversations.filter((conv) =>
+    conv.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <ResizablePanelGroup direction="horizontal" className="flex-1">
       <ResizablePanel defaultSize={25} minSize={20} maxSize={30}>
@@ -60,7 +67,15 @@ function MessagesLayout() {
               <h2 className="text-lg font-semibold mb-4">最近会话</h2>
               <div className="h-full flex flex-col gap-2">
                 <div className="flex gap-2">
-                  <Input placeholder="搜索会话..." className="pl-10" />
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="搜索会话..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
                   <div className="flex gap-1">
                     <Button
                       size="sm"
@@ -87,8 +102,8 @@ function MessagesLayout() {
                       <div className="flex items-center justify-center py-8">
                         <Loader2 className="h-6 w-6 animate-spin" />
                       </div>
-                    ) : conversations.length > 0 ? (
-                      conversations.map((conversation) => (
+                    ) : filteredConversations.length > 0 ? (
+                      filteredConversations.map((conversation) => (
                         <Link
                           key={conversation.id}
                           to="/messages/$chatId"
@@ -97,7 +112,9 @@ function MessagesLayout() {
                         >
                           <div className="flex items-center space-x-3">
                             <Avatar className="h-12 w-12">
-                              <AvatarImage src={conversation.avatar} />
+                              <AvatarImage
+                                src={conversation.avatar || undefined}
+                              />
                               <AvatarFallback>
                                 {conversation.name.charAt(0)}
                               </AvatarFallback>

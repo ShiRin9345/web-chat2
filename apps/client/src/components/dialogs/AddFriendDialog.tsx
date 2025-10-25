@@ -115,7 +115,7 @@ export function AddFriendDialog({ open, onOpenChange }: AddFriendDialogProps) {
                       onClick={() => setSelectedUser(user)}
                     >
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src={user.image} />
+                        <AvatarImage src={user.image || undefined} />
                         <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
@@ -123,7 +123,7 @@ export function AddFriendDialog({ open, onOpenChange }: AddFriendDialogProps) {
                           {user.name}
                         </p>
                         <p className="text-xs text-muted-foreground truncate">
-                          {user.email}
+                          账号: {user.code} · {user.email}
                         </p>
                       </div>
                       {selectedUser?.id === user.id && (
@@ -142,7 +142,7 @@ export function AddFriendDialog({ open, onOpenChange }: AddFriendDialogProps) {
             <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
               <div className="flex items-center space-x-3">
                 <Avatar className="h-10 w-10">
-                  <AvatarImage src={selectedUser.image} />
+                  <AvatarImage src={selectedUser.image || undefined} />
                   <AvatarFallback>{selectedUser.name.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div>

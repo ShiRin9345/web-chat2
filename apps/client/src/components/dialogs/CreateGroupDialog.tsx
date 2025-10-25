@@ -114,7 +114,7 @@ export function CreateGroupDialog({
                         onChange={() => handleMemberToggle(friend.id)}
                       />
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src={friend.image} />
+                        <AvatarImage src={friend.image || undefined} />
                         <AvatarFallback>{friend.name.charAt(0)}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
