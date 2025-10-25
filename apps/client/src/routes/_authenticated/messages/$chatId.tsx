@@ -11,11 +11,18 @@ import { Send, Phone, Video, MoreHorizontal } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/messages/$chatId")({
   component: ChatPage,
+  validateSearch: (search: Record<string, unknown>) => {
+    return search;
+  },
+  beforeLoad: async ({ params }) => {
+    console.log("Loading chat with ID:", params.chatId);
+    return {};
+  },
 });
 
 function ChatPage() {
   const { chatId } = Route.useParams();
-  console.log(chatId);
+  console.log("ChatPage rendered with chatId:", chatId);
 
   // 模拟聊天数据
   const messages = [
