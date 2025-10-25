@@ -88,26 +88,31 @@ export function useWebRTC({
     // 处理 ICE 候选
     pc.onicecandidate = (event) => {
       if (event.candidate && socket) {
+        console.log("发送 ICE Candidate 给好友:", friendId);
         socket.emit("webrtc:ice-candidate", {
           roomId,
           candidate: event.candidate.toJSON(),
           targetUserId: friendId,
         });
+      } else if (!event.candidate) {
+        console.log("所有 ICE Candidate 已收集完成");
       }
     };
 
     // 接收远程流
     pc.ontrack = (event) => {
-      console.log("收到远程媒体流");
+      console.log("收到远程媒体流, 轨道类型:", event.track.kind);
       if (event.streams && event.streams[0]) {
+        console.log("设置远程流");
         setRemoteStream(event.streams[0]);
       }
     };
 
     // 连接状态变化
     pc.onconnectionstatechange = () => {
-      console.log("连接状态:", pc.connectionState);
+      console.log("连接状态变化:", pc.connectionState);
       if (pc.connectionState === "connected") {
+        console.log("WebRTC 连接已建立");
         updateConnectionState("connected");
         // 通知后端已连接
         if (socket && recordId) {
@@ -117,6 +122,7 @@ export function useWebRTC({
         pc.connectionState === "failed" ||
         pc.connectionState === "disconnected"
       ) {
+        console.error("连接失败或断开:", pc.connectionState);
         setError("连接失败，请检查网络");
         updateConnectionState("error");
       }
@@ -130,10 +136,15 @@ export function useWebRTC({
   const createOffer = useCallback(
     async (pc: RTCPeerConnection) => {
       try {
+        console.log("开始创建 Offer, PeerConnection 状态:", pc.signalingState);
         const offer = await pc.createOffer();
+        console.log("创建 Offer 成功:", offer);
+        
         await pc.setLocalDescription(offer);
+        console.log("设置本地描述成功");
 
         if (socket) {
+          console.log("发送 Offer 给好友:", friendId);
           socket.emit("webrtc:offer", {
             roomId,
             offer: offer,
@@ -153,10 +164,15 @@ export function useWebRTC({
   const createAnswer = useCallback(
     async (pc: RTCPeerConnection) => {
       try {
+        console.log("开始创建 Answer, PeerConnection 状态:", pc.signalingState);
         const answer = await pc.createAnswer();
+        console.log("创建 Answer 成功:", answer);
+        
         await pc.setLocalDescription(answer);
+        console.log("设置本地描述成功");
 
         if (socket) {
+          console.log("发送 Answer 给好友:", friendId);
           socket.emit("webrtc:answer", {
             roomId,
             answer: answer,
@@ -234,6 +250,8 @@ export function useWebRTC({
     if (!socket) return;
 
     const init = async () => {
+      console.log("初始化通话, isInitiator:", isInitiator);
+      
       // 获取本地媒体流
       const stream = await initLocalStream();
       if (!stream) return;
@@ -243,11 +261,13 @@ export function useWebRTC({
 
       // 添加本地流到 PeerConnection
       stream.getTracks().forEach((track) => {
+        console.log("添加媒体轨道:", track.kind);
         pc.addTrack(track, stream);
       });
 
       if (isInitiator) {
         // 发起方：发送通话请求
+        console.log("发起方：发送通话请求");
         updateConnectionState("calling");
         socket.emit("call:request", {
           roomId,
@@ -255,14 +275,17 @@ export function useWebRTC({
           toUserId: friendId,
           callType,
         });
+        // 注意：发起方需要等待接收方接受后才创建 Offer
       } else {
         // 接收方：发送接受信令
+        console.log("接收方：发送接受信令");
         updateConnectionState("connecting");
         socket.emit("call:accept", {
           roomId,
           userId,
           recordId,
         });
+        // 注意：接收方需要等待发起方发送 Offer
       }
     };
 
@@ -290,10 +313,14 @@ export function useWebRTC({
 
     // 通话被接受
     const handleCallAccepted = async () => {
+      console.log("对方已接受通话，开始创建 Offer");
       updateConnectionState("connecting");
       const pc = peerConnectionRef.current;
       if (pc) {
+        console.log("PeerConnection 状态:", pc.signalingState);
         await createOffer(pc);
+      } else {
+        console.error("PeerConnection 不存在");
       }
     };
 
@@ -302,12 +329,16 @@ export function useWebRTC({
       offer: RTCSessionDescriptionInit;
       fromUserId: string;
     }) => {
+      console.log("收到 Offer:", data);
       const pc = peerConnectionRef.current;
       if (pc) {
         try {
+          console.log("设置远程描述 (Offer)");
           await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+          console.log("远程描述设置成功，PeerConnection 状态:", pc.signalingState);
 
           // 处理队列中的 ICE candidates
+          console.log("处理缓存的 ICE candidates, 数量:", iceCandidatesQueueRef.current.length);
           while (iceCandidatesQueueRef.current.length > 0) {
             const candidate = iceCandidatesQueueRef.current.shift();
             if (candidate) {
@@ -315,12 +346,15 @@ export function useWebRTC({
             }
           }
 
+          console.log("开始创建 Answer");
           await createAnswer(pc);
         } catch (err) {
           console.error("处理 Offer 失败:", err);
           setError("连接失败");
           updateConnectionState("error");
         }
+      } else {
+        console.error("PeerConnection 不存在");
       }
     };
 
@@ -329,12 +363,16 @@ export function useWebRTC({
       answer: RTCSessionDescriptionInit;
       fromUserId: string;
     }) => {
+      console.log("收到 Answer:", data);
       const pc = peerConnectionRef.current;
       if (pc) {
         try {
+          console.log("设置远程描述 (Answer)");
           await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+          console.log("远程描述设置成功，PeerConnection 状态:", pc.signalingState);
 
           // 处理队列中的 ICE candidates
+          console.log("处理缓存的 ICE candidates, 数量:", iceCandidatesQueueRef.current.length);
           while (iceCandidatesQueueRef.current.length > 0) {
             const candidate = iceCandidatesQueueRef.current.shift();
             if (candidate) {
@@ -346,6 +384,8 @@ export function useWebRTC({
           setError("连接失败");
           updateConnectionState("error");
         }
+      } else {
+        console.error("PeerConnection 不存在");
       }
     };
 
@@ -354,15 +394,18 @@ export function useWebRTC({
       candidate: RTCIceCandidateInit;
       fromUserId: string;
     }) => {
+      console.log("收到 ICE Candidate:", data);
       const pc = peerConnectionRef.current;
       if (pc && pc.remoteDescription) {
         try {
+          console.log("添加 ICE Candidate");
           await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
         } catch (err) {
           console.error("添加 ICE Candidate 失败:", err);
         }
       } else {
         // 如果还没有远程描述，先缓存 ICE candidate
+        console.log("缓存 ICE Candidate（还没有远程描述）");
         iceCandidatesQueueRef.current.push(data.candidate);
       }
     };

@@ -192,6 +192,9 @@ io.on("connection", (socket) => {
           return;
         }
 
+        // 发起方加入房间
+        socket.join(roomId);
+
         // 返回记录ID给双方
         socket.emit("call:record-created", { recordId: record.id });
 
@@ -321,18 +324,24 @@ io.on("connection", (socket) => {
   // WebRTC 信令 - Offer
   socket.on(
     "webrtc:offer",
-    (data: { roomId: string; offer: RTCSessionDescriptionInit; targetUserId: string }) => {
-      console.log("转发 WebRTC Offer");
+    (data: {
+      roomId: string;
+      offer: RTCSessionDescriptionInit;
+      targetUserId: string;
+    }) => {
+      console.log("转发 WebRTC Offer 给用户:", data.targetUserId);
       const { roomId, offer, targetUserId } = data;
-      const fromUserId = socket.data?.userId;
 
       // 转发给目标用户
       const targetSocketId = onlineUserService.getSocketId(targetUserId);
       if (targetSocketId) {
         io.to(targetSocketId).emit("webrtc:receive-offer", {
           offer,
-          fromUserId,
+          fromUserId: socket.data?.userId,
         });
+        console.log("Offer 已转发给:", targetSocketId);
+      } else {
+        console.error("目标用户不在线:", targetUserId);
       }
     }
   );
@@ -340,18 +349,24 @@ io.on("connection", (socket) => {
   // WebRTC 信令 - Answer
   socket.on(
     "webrtc:answer",
-    (data: { roomId: string; answer: RTCSessionDescriptionInit; targetUserId: string }) => {
-      console.log("转发 WebRTC Answer");
+    (data: {
+      roomId: string;
+      answer: RTCSessionDescriptionInit;
+      targetUserId: string;
+    }) => {
+      console.log("转发 WebRTC Answer 给用户:", data.targetUserId);
       const { roomId, answer, targetUserId } = data;
-      const fromUserId = socket.data?.userId;
 
       // 转发给目标用户
       const targetSocketId = onlineUserService.getSocketId(targetUserId);
       if (targetSocketId) {
         io.to(targetSocketId).emit("webrtc:receive-answer", {
           answer,
-          fromUserId,
+          fromUserId: socket.data?.userId,
         });
+        console.log("Answer 已转发给:", targetSocketId);
+      } else {
+        console.error("目标用户不在线:", targetUserId);
       }
     }
   );
@@ -359,17 +374,20 @@ io.on("connection", (socket) => {
   // WebRTC 信令 - ICE Candidate
   socket.on(
     "webrtc:ice-candidate",
-    (data: { roomId: string; candidate: RTCIceCandidateInit; targetUserId: string }) => {
-      console.log("转发 ICE Candidate");
+    (data: {
+      roomId: string;
+      candidate: RTCIceCandidateInit;
+      targetUserId: string;
+    }) => {
+      console.log("转发 ICE Candidate 给用户:", data.targetUserId);
       const { roomId, candidate, targetUserId } = data;
-      const fromUserId = socket.data?.userId;
 
       // 转发给目标用户
       const targetSocketId = onlineUserService.getSocketId(targetUserId);
       if (targetSocketId) {
         io.to(targetSocketId).emit("webrtc:receive-ice", {
           candidate,
-          fromUserId,
+          fromUserId: socket.data?.userId,
         });
       }
     }
