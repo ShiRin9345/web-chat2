@@ -1,0 +1,193 @@
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@workspace/ui/components/dialog";
+import { Button } from "@workspace/ui/components/button";
+import { Input } from "@workspace/ui/components/input";
+import { Label } from "@workspace/ui/components/label";
+import { Textarea } from "@workspace/ui/components/textarea";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@workspace/ui/components/avatar";
+import { Badge } from "@workspace/ui/components/badge";
+import { Loader2, Search, UserPlus } from "lucide-react";
+import { useSearchUsers, useSendFriendRequest } from "../queries/friends.ts";
+
+interface AddFriendDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export function AddFriendDialog({ open, onOpenChange }: AddFriendDialogProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [message, setMessage] = useState("");
+
+  const { data: searchResults, isLoading: isSearching } =
+    useSearchUsers(searchQuery);
+  const sendFriendRequest = useSendFriendRequest();
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      // 搜索逻辑由 useSearchUsers 自动处理
+    }
+  };
+
+  const handleSendRequest = async () => {
+    if (!selectedUser) return;
+
+    try {
+      await sendFriendRequest.mutateAsync({
+        toUserId: selectedUser.id,
+        message: message.trim() || undefined,
+      });
+
+      // 重置状态并关闭对话框
+      setSelectedUser(null);
+      setMessage("");
+      setSearchQuery("");
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Failed to send friend request:", error);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>添加好友</DialogTitle>
+          <DialogDescription>
+            通过邮箱或用户 ID 搜索并添加好友
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* 搜索表单 */}
+          <form onSubmit={handleSearch} className="space-y-2">
+            <Label htmlFor="search">搜索用户</Label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="search"
+                  placeholder="输入邮箱或用户 ID"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Button type="submit" disabled={!searchQuery.trim()}>
+                {isSearching ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Search className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+          </form>
+
+          {/* 搜索结果 */}
+          {searchResults && searchResults.length > 0 && (
+            <div className="space-y-2">
+              <Label>搜索结果</Label>
+              <div className="space-y-2 max-h-32 overflow-y-auto">
+                {searchResults.map((user: any) => (
+                  <div
+                    key={user.id}
+                    className={`flex items-center space-x-3 p-2 rounded-lg border cursor-pointer transition-colors ${
+                      selectedUser?.id === user.id
+                        ? "bg-primary/10 border-primary"
+                        : "hover:bg-muted"
+                    }`}
+                    onClick={() => setSelectedUser(user)}
+                  >
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user.image} />
+                      <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {user.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {user.email}
+                      </p>
+                    </div>
+                    {selectedUser?.id === user.id && (
+                      <Badge variant="default" className="text-xs">
+                        已选择
+                      </Badge>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 选择用户后的操作 */}
+          {selectedUser && (
+            <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
+              <div className="flex items-center space-x-3">
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={selectedUser.image} />
+                  <AvatarFallback>{selectedUser.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-medium">{selectedUser.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedUser.email}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="message">附加消息（可选）</Label>
+                <Textarea
+                  id="message"
+                  placeholder="发送好友申请时附加的消息..."
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  rows={3}
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleSendRequest}
+                  disabled={sendFriendRequest.isPending}
+                  className="flex-1"
+                >
+                  {sendFriendRequest.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <UserPlus className="h-4 w-4 mr-2" />
+                  )}
+                  发送好友申请
+                </Button>
+                <Button variant="outline" onClick={() => setSelectedUser(null)}>
+                  取消
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* 无搜索结果 */}
+          {searchQuery && searchResults && searchResults.length === 0 && (
+            <div className="text-center py-4 text-muted-foreground">
+              <p>未找到用户</p>
+              <p className="text-xs">请检查邮箱或用户 ID 是否正确</p>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

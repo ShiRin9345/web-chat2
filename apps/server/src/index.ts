@@ -6,6 +6,8 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import { auth } from "./auth.ts";
 import { ossRouter } from "./routes/oss.ts";
+import { friendsRouter } from "./routes/friends.ts";
+import { groupsRouter } from "./routes/groups.ts";
 config({ path: ".env.local" });
 
 const app = express();
@@ -33,6 +35,8 @@ app.all("/api/auth/*splat", toNodeHandler(auth));
 // 重要：express.json() 必须在 Better Auth handler 之后
 app.use(express.json());
 app.use("/api/oss", ossRouter);
+app.use("/api/friends", friendsRouter);
+app.use("/api/groups", groupsRouter);
 
 app.get("/check", (_req, res) => {
   res.send("Hello World");

@@ -7,7 +7,13 @@ import {
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
 import { ScrollArea } from "@workspace/ui/components/scroll-area";
-import { Send, Phone, Video, MoreHorizontal } from "lucide-react";
+import {
+  Send,
+  Phone,
+  Video,
+  MoreHorizontal,
+  MessageSquare,
+} from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/messages/$chatId")({
   component: ChatPage,
@@ -24,42 +30,15 @@ function ChatPage() {
   const { chatId } = Route.useParams();
   console.log("ChatPage rendered with chatId:", chatId);
 
-  // 模拟聊天数据
-  const messages = [
-    {
-      id: "1",
-      senderId: "other",
-      content: "你好！",
-      timestamp: "10:25",
-      isRead: true,
-    },
-    {
-      id: "2",
-      senderId: "me",
-      content: "你好，最近怎么样？",
-      timestamp: "10:26",
-      isRead: true,
-    },
-    {
-      id: "3",
-      senderId: "other",
-      content: "还不错，工作有点忙。你呢？",
-      timestamp: "10:28",
-      isRead: true,
-    },
-    {
-      id: "4",
-      senderId: "me",
-      content: "我也挺忙的，不过还好。周末有空一起吃饭吗？",
-      timestamp: "10:30",
-      isRead: false,
-    },
-  ];
+  // 解析 chatId 获取类型和实际 ID
+  const isGroup = chatId.startsWith("group-");
+  const actualId = chatId.replace(/^(friend-|group-)/, "");
 
+  // 暂时显示占位内容，不实现实际的消息功能
   const chatInfo = {
-    name: "张三",
+    name: isGroup ? "群聊" : "好友",
     avatar: "",
-    isOnline: true,
+    isOnline: false,
   };
 
   return (
@@ -99,64 +78,23 @@ function ChatPage() {
 
       {/* 消息区域 */}
       <ScrollArea className="flex-1 p-4">
-        <div className="space-y-4">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${
-                message.senderId === "me" ? "justify-end" : "justify-start"
-              }`}
-            >
-              <div
-                className={`flex items-end space-x-2 max-w-[70%] ${
-                  message.senderId === "me"
-                    ? "flex-row-reverse space-x-reverse"
-                    : ""
-                }`}
-              >
-                {message.senderId === "other" && (
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={chatInfo.avatar} />
-                    <AvatarFallback>{chatInfo.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                )}
-
-                <div
-                  className={`rounded-lg px-3 py-2 ${
-                    message.senderId === "me"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted"
-                  }`}
-                >
-                  <p className="text-sm">{message.content}</p>
-                  <div
-                    className={`flex items-center mt-1 ${
-                      message.senderId === "me"
-                        ? "justify-end"
-                        : "justify-start"
-                    }`}
-                  >
-                    <span className="text-xs opacity-70">
-                      {message.timestamp}
-                    </span>
-                    {message.senderId === "me" && (
-                      <span className="ml-1 text-xs opacity-70">
-                        {message.isRead ? "已读" : "未读"}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
+        <div className="h-full flex items-center justify-center">
+          <div className="text-center text-muted-foreground">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+              <MessageSquare className="w-8 h-8" />
             </div>
-          ))}
+            <p className="text-lg font-medium">聊天功能开发中</p>
+            <p className="text-sm mt-2">消息发送和接收功能暂未实现</p>
+            <p className="text-xs mt-1">Chat ID: {chatId}</p>
+          </div>
         </div>
       </ScrollArea>
 
-      {/* 消息输入区域 */}
+      {/* 消息输入区域 - 暂时禁用 */}
       <div className="p-4 border-t">
-        <div className="flex items-center space-x-2">
-          <Input placeholder="输入消息..." className="flex-1" />
-          <Button size="sm">
+        <div className="flex items-center space-x-2 opacity-50">
+          <Input placeholder="消息功能开发中..." className="flex-1" disabled />
+          <Button size="sm" disabled>
             <Send className="h-4 w-4" />
           </Button>
         </div>

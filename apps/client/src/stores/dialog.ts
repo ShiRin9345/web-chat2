@@ -1,6 +1,11 @@
 import { create } from "zustand";
 
-export type DialogType = "editProfile" | null;
+export type DialogType =
+  | "editProfile"
+  | "addFriend"
+  | "friendRequests"
+  | "createGroup"
+  | null;
 
 interface DialogState {
   dialogType: DialogType;
