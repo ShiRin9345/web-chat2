@@ -52,7 +52,6 @@ export function VideoCallDialog({
     remoteStream,
     isAudioEnabled,
     isVideoEnabled,
-    connectionState,
     toggleAudio,
     toggleVideo,
     endCall,
