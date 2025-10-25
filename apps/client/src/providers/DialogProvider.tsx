@@ -18,10 +18,13 @@ interface IncomingCallData {
 }
 
 export function DialogProvider() {
-  const { dialogType, isOpen, closeDialog, callData, openDialog } = useDialogStore();
+  const { dialogType, isOpen, closeDialog, callData, openDialog } =
+    useDialogStore();
   const socket = useSocket();
   const session = authClient.useSession();
-  const [incomingCall, setIncomingCall] = useState<IncomingCallData | null>(null);
+  const [incomingCall, setIncomingCall] = useState<IncomingCallData | null>(
+    null
+  );
 
   // 获取来电用户信息
   const { data: incomingCallUser } = useQuery({
@@ -49,10 +52,26 @@ export function DialogProvider() {
       setIncomingCall(data);
     };
 
+    // 监听通话被取消（发起方在接听前取消）
+    const handleCallCancelled = () => {
+      console.log("对方已取消通话");
+      setIncomingCall(null);
+    };
+
+    // 监听通话结束（通用）
+    const handleCallEnded = () => {
+      console.log("通话已结束");
+      setIncomingCall(null);
+    };
+
     socket.on("call:incoming", handleIncomingCall);
+    socket.on("call:ended", handleCallEnded);
+    socket.on("call:cancelled", handleCallCancelled);
 
     return () => {
       socket.off("call:incoming", handleIncomingCall);
+      socket.off("call:ended", handleCallEnded);
+      socket.off("call:cancelled", handleCallCancelled);
     };
   }, [socket]);
 
@@ -61,18 +80,15 @@ export function DialogProvider() {
     if (!incomingCall || !incomingCallUser) return;
 
     setIncomingCall(null);
-    openDialog(
-      incomingCall.callType === "video" ? "videoCall" : "audioCall",
-      {
-        roomId: incomingCall.roomId,
-        friendId: incomingCall.fromUserId,
-        friendName: incomingCallUser.name,
-        friendAvatar: incomingCallUser.image,
-        callType: incomingCall.callType,
-        isInitiator: false,
-        recordId: incomingCall.recordId,
-      }
-    );
+    openDialog(incomingCall.callType === "video" ? "videoCall" : "audioCall", {
+      roomId: incomingCall.roomId,
+      friendId: incomingCall.fromUserId,
+      friendName: incomingCallUser.name,
+      friendAvatar: incomingCallUser.image,
+      callType: incomingCall.callType,
+      isInitiator: false,
+      recordId: incomingCall.recordId,
+    });
   };
 
   // 拒绝来电
@@ -94,17 +110,18 @@ export function DialogProvider() {
       {dialogType === "createGroup" && (
         <CreateGroupDialog open={isOpen} onOpenChange={closeDialog} />
       )}
-      {(dialogType === "videoCall" || dialogType === "audioCall") && callData && (
-        <VideoCallDialog
-          roomId={callData.roomId}
-          friendId={callData.friendId}
-          friendName={callData.friendName}
-          friendAvatar={callData.friendAvatar}
-          callType={callData.callType}
-          isInitiator={callData.isInitiator}
-          recordId={callData.recordId}
-        />
-      )}
+      {(dialogType === "videoCall" || dialogType === "audioCall") &&
+        callData && (
+          <VideoCallDialog
+            roomId={callData.roomId}
+            friendId={callData.friendId}
+            friendName={callData.friendName}
+            friendAvatar={callData.friendAvatar}
+            callType={callData.callType}
+            isInitiator={callData.isInitiator}
+            recordId={callData.recordId}
+          />
+        )}
       {incomingCall && incomingCallUser && (
         <IncomingCallDialog
           isOpen={true}

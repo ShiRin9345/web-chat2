@@ -1,4 +1,4 @@
-import { Dialog, DialogContent } from "@workspace/ui/components/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@workspace/ui/components/dialog";
 import { Button } from "@workspace/ui/components/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@workspace/ui/components/avatar";
 import { Phone, PhoneOff } from "lucide-react";
@@ -44,6 +44,11 @@ export function IncomingCallDialog({
   return (
     <Dialog open={isOpen} onOpenChange={handleReject}>
       <DialogContent className="max-w-md">
+        {/* 隐藏的标题，用于屏幕阅读器 */}
+        <DialogTitle className="sr-only">
+          {friendName} 来电 - {callType === "video" ? "视频通话" : "语音通话"}
+        </DialogTitle>
+        
         <div className="flex flex-col items-center justify-center py-8">
           {/* 头像 */}
           <Avatar className="w-24 h-24 mb-4">

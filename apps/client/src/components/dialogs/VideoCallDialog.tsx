@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Dialog, DialogContent } from "@workspace/ui/components/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@workspace/ui/components/dialog";
 import { Button } from "@workspace/ui/components/button";
 import {
   Avatar,
@@ -142,6 +142,11 @@ export function VideoCallDialog({
   return (
     <Dialog open={isOpen} onOpenChange={closeDialog}>
       <DialogContent className="max-w-4xl h-[600px] p-0 overflow-hidden">
+        {/* 隐藏的标题，用于屏幕阅读器 */}
+        <DialogTitle className="sr-only">
+          {callType === "video" ? "视频通话" : "语音通话"} - {friendName}
+        </DialogTitle>
+        
         <div className="relative w-full h-full bg-gray-900">
           {/* 远程视频（主画面） */}
           {callType === "video" ? (
@@ -235,7 +240,7 @@ export function VideoCallDialog({
           </div>
 
           {/* 错误提示 */}
-          {error && connectionStatus === "error" && (
+          {error && (connectionStatus === "error" || connectionStatus === "ended") && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/80">
               <div className="text-center">
                 <p className="text-white text-lg mb-4">{error}</p>

@@ -52,11 +52,18 @@ export function useWebRTC({
 
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const iceCandidatesQueueRef = useRef<RTCIceCandidateInit[]>([]);
+  const isConnectedRef = useRef(false); // 跟踪是否已连接
 
   // 更新连接状态
   const updateConnectionState = useCallback(
     (state: ConnectionState) => {
       setConnectionState(state);
+      // 同步更新 ref
+      if (state === "connected") {
+        isConnectedRef.current = true;
+      } else if (state === "ended" || state === "error") {
+        isConnectedRef.current = false;
+      }
       onConnectionStateChange?.(state);
     },
     [onConnectionStateChange]
@@ -118,19 +125,59 @@ export function useWebRTC({
         if (socket && recordId) {
           socket.emit("call:connected", { recordId, userId });
         }
-      } else if (
-        pc.connectionState === "failed" ||
-        pc.connectionState === "disconnected"
-      ) {
-        console.error("连接失败或断开:", pc.connectionState);
+      } else if (pc.connectionState === "failed") {
+        console.error("连接失败:", pc.connectionState);
         setError("连接失败，请检查网络");
         updateConnectionState("error");
+        // 通知对方连接失败
+        if (socket && recordId) {
+          socket.emit("call:end", {
+            roomId,
+            userId,
+            recordId,
+            endReason: "cancelled",
+            targetUserId: friendId, // 添加目标用户ID
+          });
+        }
+      } else if (
+        pc.connectionState === "disconnected" ||
+        pc.connectionState === "closed"
+      ) {
+        console.warn("连接断开或关闭:", pc.connectionState);
+        // 如果是在通话中突然断开（不是正常挂断）
+        if (isConnectedRef.current) {
+          console.log("检测到通话中连接断开");
+          setError("对方网络丢失，通话已断开");
+          updateConnectionState("ended");
+          // 通知对方连接已断开
+          if (socket && recordId) {
+            socket.emit("call:end", {
+              roomId,
+              userId,
+              recordId,
+              endReason: "cancelled",
+              targetUserId: friendId, // 添加目标用户ID
+            });
+          }
+          // 2秒后自动关闭对话框
+          setTimeout(() => {
+            onCallEnded?.();
+          }, 2000);
+        }
       }
     };
 
     peerConnectionRef.current = pc;
     return pc;
-  }, [roomId, friendId, socket, userId, recordId, updateConnectionState]);
+  }, [
+    roomId,
+    friendId,
+    socket,
+    userId,
+    recordId,
+    updateConnectionState,
+    onCallEnded,
+  ]);
 
   // 创建 Offer (发起方)
   const createOffer = useCallback(
@@ -139,7 +186,7 @@ export function useWebRTC({
         console.log("开始创建 Offer, PeerConnection 状态:", pc.signalingState);
         const offer = await pc.createOffer();
         console.log("创建 Offer 成功:", offer);
-        
+
         await pc.setLocalDescription(offer);
         console.log("设置本地描述成功");
 
@@ -167,7 +214,7 @@ export function useWebRTC({
         console.log("开始创建 Answer, PeerConnection 状态:", pc.signalingState);
         const answer = await pc.createAnswer();
         console.log("创建 Answer 成功:", answer);
-        
+
         await pc.setLocalDescription(answer);
         console.log("设置本地描述成功");
 
@@ -230,6 +277,7 @@ export function useWebRTC({
         userId,
         recordId,
         endReason: "hangup",
+        targetUserId: friendId, // 添加目标用户ID
       });
     }
 
@@ -240,6 +288,7 @@ export function useWebRTC({
     socket,
     roomId,
     userId,
+    friendId,
     recordId,
     updateConnectionState,
     onCallEnded,
@@ -251,7 +300,7 @@ export function useWebRTC({
 
     const init = async () => {
       console.log("初始化通话, isInitiator:", isInitiator);
-      
+
       // 获取本地媒体流
       const stream = await initLocalStream();
       if (!stream) return;
@@ -291,8 +340,34 @@ export function useWebRTC({
 
     init();
 
+    // 监听浏览器标签页关闭/刷新事件
+    const handleBeforeUnload = () => {
+      console.log("检测到标签页即将关闭，发送结束通话信令");
+      // 立即通知对方通话结束
+      if (socket && recordId) {
+        socket.emit("call:end", {
+          roomId,
+          userId,
+          recordId,
+          endReason: "cancelled",
+          targetUserId: friendId, // 添加目标用户ID
+        });
+      }
+      // 停止所有媒体轨道
+      if (localStream) {
+        localStream.getTracks().forEach((track) => track.stop());
+      }
+      // 关闭 PeerConnection
+      if (peerConnectionRef.current) {
+        peerConnectionRef.current.close();
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
     // 清理函数
     return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
       if (localStream) {
         localStream.getTracks().forEach((track) => track.stop());
       }
@@ -335,10 +410,16 @@ export function useWebRTC({
         try {
           console.log("设置远程描述 (Offer)");
           await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-          console.log("远程描述设置成功，PeerConnection 状态:", pc.signalingState);
+          console.log(
+            "远程描述设置成功，PeerConnection 状态:",
+            pc.signalingState
+          );
 
           // 处理队列中的 ICE candidates
-          console.log("处理缓存的 ICE candidates, 数量:", iceCandidatesQueueRef.current.length);
+          console.log(
+            "处理缓存的 ICE candidates, 数量:",
+            iceCandidatesQueueRef.current.length
+          );
           while (iceCandidatesQueueRef.current.length > 0) {
             const candidate = iceCandidatesQueueRef.current.shift();
             if (candidate) {
@@ -346,7 +427,7 @@ export function useWebRTC({
             }
           }
 
-          console.log("开始创建 Answer");
+          // 创建 Answer
           await createAnswer(pc);
         } catch (err) {
           console.error("处理 Offer 失败:", err);
@@ -369,10 +450,16 @@ export function useWebRTC({
         try {
           console.log("设置远程描述 (Answer)");
           await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
-          console.log("远程描述设置成功，PeerConnection 状态:", pc.signalingState);
+          console.log(
+            "远程描述设置成功，PeerConnection 状态:",
+            pc.signalingState
+          );
 
           // 处理队列中的 ICE candidates
-          console.log("处理缓存的 ICE candidates, 数量:", iceCandidatesQueueRef.current.length);
+          console.log(
+            "处理缓存的 ICE candidates, 数量:",
+            iceCandidatesQueueRef.current.length
+          );
           while (iceCandidatesQueueRef.current.length > 0) {
             const candidate = iceCandidatesQueueRef.current.shift();
             if (candidate) {

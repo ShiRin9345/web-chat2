@@ -278,9 +278,11 @@ io.on("connection", (socket) => {
       recordId: string;
       duration?: number;
       endReason: "hangup" | "rejected" | "timeout" | "cancelled";
+      targetUserId?: string; // 新增：目标用户ID，用于直接通知
     }) => {
       console.log("结束通话:", data);
-      const { roomId, userId, recordId, duration, endReason } = data;
+      const { roomId, userId, recordId, duration, endReason, targetUserId } =
+        data;
 
       try {
         // 确定状态
@@ -311,7 +313,17 @@ io.on("connection", (socket) => {
         });
 
         // 通知对方通话已结束
-        socket.to(roomId).emit("call:ended", { userId });
+        // 优先尝试通过房间通知（对方已加入房间）
+        socket.to(roomId).emit("call:ended", { userId, endReason });
+
+        // 如果提供了 targetUserId，也直接通知目标用户（防止对方还没加入房间）
+        if (targetUserId) {
+          const targetSocketId = onlineUserService.getSocketId(targetUserId);
+          if (targetSocketId) {
+            console.log("直接通知目标用户:", targetUserId, "通话已结束");
+            io.to(targetSocketId).emit("call:ended", { userId, endReason });
+          }
+        }
 
         // 离开房间
         socket.leave(roomId);
