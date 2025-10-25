@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import {
   Avatar,
@@ -24,6 +24,7 @@ export const Route = createFileRoute("/_authenticated/contacts")({
 });
 
 function ContactsPage() {
+  const navigate = useNavigate();
   const { openDialog } = useDialogStore();
   const { data: contacts, isLoading: isLoadingFriends } = useFriends();
   const { data: groups, isLoading: isLoadingGroups } = useGroups();
@@ -31,6 +32,16 @@ function ContactsPage() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const pendingRequestsCount = friendRequests?.length || 0;
+
+  // 处理点击好友
+  const handleContactClick = (contactId: string) => {
+    navigate({ to: "/messages/$chatId", params: { chatId: contactId } });
+  };
+
+  // 处理点击群组
+  const handleGroupClick = (groupId: string) => {
+    navigate({ to: "/messages/$chatId", params: { chatId: groupId } });
+  };
 
   // 过滤好友
   const filteredContacts = contacts?.filter((contact) => {
@@ -110,6 +121,7 @@ function ContactsPage() {
                             {filteredContacts.map((contact) => (
                               <div
                                 key={contact.id}
+                                onClick={() => handleContactClick(contact.id)}
                                 className="block p-3 rounded-lg hover:bg-accent transition-colors cursor-pointer"
                               >
                                 <div className="flex items-center space-x-3">
@@ -168,6 +180,7 @@ function ContactsPage() {
                             {filteredGroups.map((group) => (
                               <div
                                 key={group.id}
+                                onClick={() => handleGroupClick(group.id)}
                                 className="block p-3 rounded-lg hover:bg-accent transition-colors cursor-pointer"
                               >
                                 <div className="flex items-center space-x-3">
