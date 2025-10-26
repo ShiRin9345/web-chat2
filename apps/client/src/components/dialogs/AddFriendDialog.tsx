@@ -18,8 +18,12 @@ import {
   AvatarImage,
 } from "@workspace/ui/components/avatar";
 import { Badge } from "@workspace/ui/components/badge";
-import { Loader2, Search, UserPlus } from "lucide-react";
-import { useSearchUsers, useSendFriendRequest } from "@/queries/friends";
+import { Loader2, Search, UserPlus, CheckCircle } from "lucide-react";
+import {
+  useSearchUsers,
+  useSendFriendRequest,
+  useFriends,
+} from "@/queries/friends";
 
 interface AddFriendDialogProps {
   open: boolean;
@@ -36,7 +40,13 @@ export function AddFriendDialog({ open, onOpenChange }: AddFriendDialogProps) {
 
   const { data: searchResults, isLoading: isSearching } =
     useSearchUsers(debouncedSearchQuery);
+  const { data: friends } = useFriends(); // 获取当前用户的好友列表
   const sendFriendRequest = useSendFriendRequest();
+
+  // 检查用户是否已经是好友
+  const isAlreadyFriend = (userId: string) => {
+    return friends?.some((friend) => friend.id === userId) || false;
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,35 +114,47 @@ export function AddFriendDialog({ open, onOpenChange }: AddFriendDialogProps) {
               <div className="space-y-2">
                 <Label>搜索结果</Label>
                 <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {searchResults.map((user: User) => (
-                    <div
-                      key={user.id}
-                      className={`flex items-center space-x-3 p-2 rounded-lg border cursor-pointer transition-colors ${
-                        selectedUser?.id === user.id
-                          ? "bg-primary/10 border-primary"
-                          : "hover:bg-muted"
-                      }`}
-                      onClick={() => setSelectedUser(user)}
-                    >
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={user.image || undefined} />
-                        <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {user.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          账号: {user.code} · {user.email}
-                        </p>
+                  {searchResults.map((user: User) => {
+                    const isFriend = isAlreadyFriend(user.id);
+                    return (
+                      <div
+                        key={user.id}
+                        className={`flex items-center space-x-3 p-2 rounded-lg border transition-colors ${
+                          isFriend
+                            ? "bg-muted/30 border-muted cursor-not-allowed opacity-60"
+                            : selectedUser?.id === user.id
+                            ? "bg-primary/10 border-primary cursor-pointer"
+                            : "hover:bg-muted cursor-pointer"
+                        }`}
+                        onClick={() => !isFriend && setSelectedUser(user)}
+                      >
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={user.image || undefined} />
+                          <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">
+                            {user.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            账号: {user.code} · {user.email}
+                          </p>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          {isFriend ? (
+                            <Badge variant="secondary" className="text-xs">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              已是好友
+                            </Badge>
+                          ) : selectedUser?.id === user.id ? (
+                            <Badge variant="default" className="text-xs">
+                              已选择
+                            </Badge>
+                          ) : null}
+                        </div>
                       </div>
-                      {selectedUser?.id === user.id && (
-                        <Badge variant="default" className="text-xs">
-                          已选择
-                        </Badge>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -167,15 +189,22 @@ export function AddFriendDialog({ open, onOpenChange }: AddFriendDialogProps) {
               <div className="flex gap-2">
                 <Button
                   onClick={handleSendRequest}
-                  disabled={sendFriendRequest.isPending}
+                  disabled={
+                    sendFriendRequest.isPending ||
+                    isAlreadyFriend(selectedUser.id)
+                  }
                   className="flex-1"
                 >
                   {sendFriendRequest.isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : isAlreadyFriend(selectedUser.id) ? (
+                    <CheckCircle className="h-4 w-4 mr-2" />
                   ) : (
                     <UserPlus className="h-4 w-4 mr-2" />
                   )}
-                  发送好友申请
+                  {isAlreadyFriend(selectedUser.id)
+                    ? "已是好友"
+                    : "发送好友申请"}
                 </Button>
                 <Button variant="outline" onClick={() => setSelectedUser(null)}>
                   取消
