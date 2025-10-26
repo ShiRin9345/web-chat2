@@ -26,6 +26,14 @@ const ICE_SERVERS = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
+    {
+      urls: [
+        "turn:8.152.201.45:3478?transport=udp",
+        "turn:8.152.201.45:3478?transport=tcp",
+      ],
+      username: "admin", // TURN 用户名
+      credential: "123456", // TURN 密码
+    },
   ],
 };
 
