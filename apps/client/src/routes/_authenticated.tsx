@@ -27,10 +27,6 @@ import { DialogProvider } from "@/providers/DialogProvider";
 import { CallProvider } from "@/providers/CallProvider";
 
 export const Route = createFileRoute("/_authenticated")({
-  beforeLoad: () => {
-    // 移除 await，让路由立即渲染
-    // 认证检查移到组件内部处理
-  },
   component: AuthenticatedLayout,
 });
 
