@@ -1,9 +1,18 @@
-import { Dialog, DialogContent, DialogTitle } from "@workspace/ui/components/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@workspace/ui/components/dialog";
 import { Button } from "@workspace/ui/components/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@workspace/ui/components/avatar";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@workspace/ui/components/avatar";
 import { Phone, PhoneOff } from "lucide-react";
 import { useSocket } from "@/providers/SocketProvider";
 import { authClient } from "@/lib/auth-client";
+import { useCallStore } from "@/stores/call";
 
 interface IncomingCallDialogProps {
   isOpen: boolean;
@@ -29,6 +38,7 @@ export function IncomingCallDialog({
   const socket = useSocket();
   const session = authClient.useSession();
   const userId = session.data?.user.id || "";
+  const { rejectIncomingCall } = useCallStore();
 
   const handleReject = () => {
     if (socket) {
@@ -38,7 +48,7 @@ export function IncomingCallDialog({
         recordId,
       });
     }
-    onReject();
+    rejectIncomingCall();
   };
 
   return (
@@ -48,7 +58,7 @@ export function IncomingCallDialog({
         <DialogTitle className="sr-only">
           {friendName} 来电 - {callType === "video" ? "视频通话" : "语音通话"}
         </DialogTitle>
-        
+
         <div className="flex flex-col items-center justify-center py-8">
           {/* 头像 */}
           <Avatar className="w-24 h-24 mb-4">

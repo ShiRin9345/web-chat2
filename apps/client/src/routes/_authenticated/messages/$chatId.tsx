@@ -14,142 +14,21 @@ import {
   MoreHorizontal,
   MessageSquare,
 } from "lucide-react";
-import { useDialogStore } from "@/stores/dialog";
-import { useQuery } from "@tanstack/react-query";
-import { authClient } from "@/lib/auth-client";
-import { useSocket } from "@/providers/SocketProvider";
-import { useState, useEffect } from "react";
+import { useChatInfo } from "@/hooks/useChatInfo";
 
 export const Route = createFileRoute("/_authenticated/messages/$chatId")({
   component: ChatPage,
   validateSearch: (search: Record<string, unknown>) => {
     return search;
   },
-  beforeLoad: async ({ params }) => {
-    console.log("Loading chat with ID:", params.chatId);
-    return {};
-  },
+  // 移除 loader，因为 useChatInfo 现在会优先从 friends 缓存中获取数据
 });
 
 function ChatPage() {
   const { chatId } = Route.useParams();
-  console.log("ChatPage rendered with chatId:", chatId);
-  const { openDialog } = useDialogStore();
-  const socket = useSocket();
-  const session = authClient.useSession();
-  const userId = session.data?.user.id || "";
-  const [onlineFriends, setOnlineFriends] = useState<string[]>([]);
-
-  // 解析 chatId 获取类型和实际 ID
-  const isGroup = chatId.startsWith("group-");
-  const isFriend = chatId.startsWith("friend-");
-  const actualId = chatId.replace(/^(friend-|group-)/, "");
-
-  // 获取好友信息（只在是好友聊天时）
-  const { data: friendInfo } = useQuery({
-    queryKey: ["user", actualId],
-    queryFn: async () => {
-      if (!isFriend || !actualId) return null;
-      const response = await fetch(
-        `http://localhost:3001/api/friends/user/${actualId}`,
-        {
-          credentials: "include",
-        }
-      );
-      if (!response.ok) throw new Error("Failed to fetch user");
-      return response.json();
-    },
-    enabled: isFriend && !!actualId,
+  const { chatInfo, handleVideoCall, handleAudioCall } = useChatInfo({
+    chatId,
   });
-
-  // 监听在线状态
-  useEffect(() => {
-    if (!socket) return;
-
-    const handleFriendOnline = (friendId: string) => {
-      setOnlineFriends((prev) => [...new Set([...prev, friendId])]);
-    };
-
-    const handleFriendOffline = (friendId: string) => {
-      setOnlineFriends((prev) => prev.filter((id) => id !== friendId));
-    };
-
-    socket.on("friend:online", handleFriendOnline);
-    socket.on("friend:offline", handleFriendOffline);
-
-    // 获取在线好友列表
-    socket.emit("user:get-online-friends", (friendIds: string[]) => {
-      setOnlineFriends(friendIds);
-    });
-
-    return () => {
-      socket.off("friend:online", handleFriendOnline);
-      socket.off("friend:offline", handleFriendOffline);
-    };
-  }, [socket]);
-
-  const isOnline = isFriend && onlineFriends.includes(actualId);
-
-  // 暂时显示占位内容，不实现实际的消息功能
-  const chatInfo = {
-    name: isFriend && friendInfo ? friendInfo.name : (isGroup ? "群聊" : "好友"),
-    avatar: isFriend && friendInfo ? friendInfo.image : "",
-    isOnline: isOnline,
-  };
-
-  // 发起视频通话
-  const handleVideoCall = () => {
-    if (!isFriend) {
-      alert("仅支持与好友进行通话");
-      return;
-    }
-
-    if (!isOnline) {
-      alert("对方当前不在线");
-      return;
-    }
-
-    if (!navigator.mediaDevices) {
-      alert("您的浏览器不支持通话功能");
-      return;
-    }
-
-    openDialog("videoCall", {
-      roomId: chatId,
-      friendId: actualId,
-      friendName: chatInfo.name,
-      friendAvatar: chatInfo.avatar,
-      callType: "video",
-      isInitiator: true,
-    });
-  };
-
-  // 发起语音通话
-  const handleAudioCall = () => {
-    if (!isFriend) {
-      alert("仅支持与好友进行通话");
-      return;
-    }
-
-    if (!isOnline) {
-      alert("对方当前不在线");
-      return;
-    }
-
-    if (!navigator.mediaDevices) {
-      alert("您的浏览器不支持通话功能");
-      return;
-    }
-
-    openDialog("audioCall", {
-      roomId: chatId,
-      friendId: actualId,
-      friendName: chatInfo.name,
-      friendAvatar: chatInfo.avatar,
-      callType: "audio",
-      isInitiator: true,
-    });
-  };
 
   return (
     <div className="h-full flex flex-col">
@@ -158,7 +37,7 @@ function ChatPage() {
         <div className="flex items-center space-x-3">
           <div className="relative">
             <Avatar className="h-10 w-10">
-              <AvatarImage src={chatInfo.avatar} />
+              <AvatarImage src={chatInfo.avatar || undefined} />
               <AvatarFallback>{chatInfo.name.charAt(0)}</AvatarFallback>
             </Avatar>
             {chatInfo.isOnline && (
@@ -174,10 +53,20 @@ function ChatPage() {
         </div>
 
         <div className="flex items-center space-x-2">
-          <Button size="sm" variant="ghost" onClick={handleAudioCall} disabled={!isFriend || !isOnline}>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={handleAudioCall}
+            disabled={chatInfo.type !== "friend" || !chatInfo.isOnline}
+          >
             <Phone className="h-4 w-4" />
           </Button>
-          <Button size="sm" variant="ghost" onClick={handleVideoCall} disabled={!isFriend || !isOnline}>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={handleVideoCall}
+            disabled={chatInfo.type !== "friend" || !chatInfo.isOnline}
+          >
             <Video className="h-4 w-4" />
           </Button>
           <Button size="sm" variant="ghost">

@@ -30,6 +30,14 @@ declare module "@tanstack/react-router" {
   }
 }
 
+// Declare router context type
+declare module "@tanstack/react-router" {
+  interface RouterContext {
+    queryClient: typeof TanStackQueryProviderContext.queryClient;
+    auth: typeof authClient;
+  }
+}
+
 // Render the app
 const rootElement = document.getElementById("app");
 if (rootElement && !rootElement.innerHTML) {

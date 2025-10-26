@@ -1,32 +1,9 @@
-import { io, Socket } from "socket.io-client";
-import { authClient } from "@/lib/auth-client";
-import { useEffect, useState } from "react";
+import { io } from "socket.io-client";
 
 export const socket = io("http://localhost:3001", {
   autoConnect: false,
   withCredentials: true,
 });
-
-// Socket 事件钩子
-export function useSocket() {
-  const { data: session } = authClient.useSession();
-  const [isConnected, setIsConnected] = useState(false);
-
-  useEffect(() => {
-    if (session?.user) {
-      socket.connect();
-      socket.emit("user:online", session.user.id);
-      setIsConnected(true);
-    }
-
-    return () => {
-      socket.disconnect();
-      setIsConnected(false);
-    };
-  }, [session]);
-
-  return { socket, isConnected };
-}
 
 // 消息相关的事件
 export const messageEvents = {
