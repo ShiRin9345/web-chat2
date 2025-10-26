@@ -11,7 +11,7 @@ import {
   AvatarImage,
 } from "@workspace/ui/components/avatar";
 import { useWebRTC, type ConnectionState } from "@/hooks/useWebRTC";
-import { useDialogStore } from "@/stores/dialog";
+import { useCallStore } from "@/stores/call";
 import { PhoneOff, Mic, MicOff, Video, VideoOff } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 
@@ -34,7 +34,7 @@ export function VideoCallDialog({
   isInitiator,
   recordId: initialRecordId,
 }: VideoCallDialogProps) {
-  const { isOpen, closeDialog } = useDialogStore();
+  const { endCall: closeCallDialog } = useCallStore();
   const session = authClient.useSession();
   const userId = session.data?.user.id || "";
 
@@ -79,7 +79,7 @@ export function VideoCallDialog({
       }
       // 延迟关闭对话框
       setTimeout(() => {
-        closeDialog();
+        closeCallDialog();
       }, 1000);
     },
   });
@@ -152,7 +152,7 @@ export function VideoCallDialog({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={closeDialog}>
+    <Dialog open onOpenChange={closeCallDialog}>
       <DialogContent className="max-w-4xl h-[600px] p-0 overflow-hidden">
         {/* 隐藏的标题，用于屏幕阅读器 */}
         <DialogTitle className="sr-only">

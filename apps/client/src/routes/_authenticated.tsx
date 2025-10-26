@@ -1,4 +1,5 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { useEffect } from "react";
 import {
   SidebarProvider,
   Sidebar,
@@ -23,20 +24,38 @@ import { authClient } from "@/lib/auth-client";
 import { useNavigate } from "@tanstack/react-router";
 import { UserProfilePopover } from "@/components/UserProfilePopover";
 import { DialogProvider } from "@/providers/DialogProvider";
+import { CallProvider } from "@/providers/CallProvider";
 
 export const Route = createFileRoute("/_authenticated")({
-  beforeLoad: async ({ context }) => {
-    const session = await context.auth.getSession();
-    if (!session?.data?.user) {
-      throw redirect({ to: "/signIn" });
-    }
+  beforeLoad: () => {
+    // 移除 await，让路由立即渲染
+    // 认证检查移到组件内部处理
   },
   component: AuthenticatedLayout,
 });
 
 function AuthenticatedLayout() {
   const navigate = useNavigate();
-  const { data: session } = authClient.useSession();
+  const { data: session, isPending } = authClient.useSession();
+
+  // 在组件内部处理认证状态
+  useEffect(() => {
+    if (!isPending && !session?.user) {
+      navigate({ to: "/signIn" });
+    }
+  }, [session, isPending, navigate]);
+
+  if (isPending) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <div>Loading...</div>
+      </div>
+    );
+  }
+
+  if (!session?.user) {
+    return null;
+  }
 
   const navigationItems = [
     {
@@ -108,6 +127,7 @@ function AuthenticatedLayout() {
             <Outlet />
           </div>
           <DialogProvider />
+          <CallProvider />
         </SidebarProvider>
       </SocketProvider>
     </TooltipProvider>
