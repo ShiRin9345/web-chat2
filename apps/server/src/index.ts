@@ -24,6 +24,9 @@ const io = new Server(httpServer, {
   },
 });
 
+// 将 Socket.io 实例存储到 Express 应用中，供路由使用
+app.set("io", io);
+
 app.use(
   cors({
     origin: ["http://localhost:3000"],

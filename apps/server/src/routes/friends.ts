@@ -2,7 +2,29 @@ import { Router } from "express";
 import { db, friendships, friendRequests, user } from "@workspace/database";
 import { eq, and, or, like, ne } from "drizzle-orm";
 import { authenticateUser } from "@/middleware/auth.ts";
+import { onlineUserService } from "@/services/onlineUsers.ts";
 const router = Router();
+
+// 通知好友关系建立后的在线状态
+export function notifyFriendOnlineStatus(
+  io: any,
+  userId1: string,
+  userId2: string
+) {
+  // 检查双方是否都在线
+  const socketId1 = onlineUserService.getSocketId(userId1);
+  const socketId2 = onlineUserService.getSocketId(userId2);
+
+  // 如果用户1在线，通知他用户2上线了
+  if (socketId1) {
+    io.to(socketId1).emit("friend:online", userId2);
+  }
+
+  // 如果用户2在线，通知他用户1上线了
+  if (socketId2) {
+    io.to(socketId2).emit("friend:online", userId1);
+  }
+}
 
 // 获取用户的好友ID列表（用于在线状态广播）
 export async function getUserFriendIds(userId: string): Promise<string[]> {
@@ -220,6 +242,13 @@ router.post("/accept/:requestId", authenticateUser, async (req, res) => {
         status: "accepted",
       },
     ]);
+
+    // 通知双方好友关系建立后的在线状态
+    // 通过 req.app.get('io') 获取 Socket.io 实例
+    const io = req.app.get("io");
+    if (io) {
+      notifyFriendOnlineStatus(io, userId, request.fromUserId);
+    }
 
     res.json({ success: true });
   } catch (error) {
