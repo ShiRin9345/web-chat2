@@ -309,4 +309,35 @@ router.get("/search", authenticateUser, async (req, res) => {
   }
 });
 
+// 获取单个用户信息
+router.get("/user/:userId", authenticateUser, async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ error: "User ID is required" });
+    }
+
+    const [userData] = await db
+      .select({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        image: user.image,
+      })
+      .from(user)
+      .where(eq(user.id, userId))
+      .limit(1);
+
+    if (!userData) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json(userData);
+  } catch (error) {
+    console.error("Error fetching user:", error);
+    res.status(500).json({ error: "Failed to fetch user" });
+  }
+});
+
 export { router as friendsRouter };
