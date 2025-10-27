@@ -123,7 +123,7 @@ ossRouter.post(
       }
 
       // 获取聊天相关参数
-      const { chatId } = req.body;
+      const { chatId, message } = req.body; // message 为可选的附带文字消息
       if (!chatId) {
         return res.status(400).json({ error: "缺少chatId参数" });
       }
@@ -238,6 +238,43 @@ ossRouter.post(
         io.to(senderSocketId).emit("message:new", messageWithSender);
       }
 
+      // 如果有附带的文字消息，也发送文字消息
+      if (message && message.trim()) {
+        const [textMessage] = await db
+          .insert(messagesTable)
+          .values({
+            content: message.trim(),
+            senderId: req.user!.id,
+            recipientId: isFriendChat ? chatId.replace("friend-", "") : null,
+            groupId: isGroupChat ? chatId.replace("group-", "") : null,
+            type: "text",
+            isRead: false,
+          })
+          .returning();
+
+        const textMessageWithSender = {
+          ...textMessage,
+          sender,
+        };
+
+        // 推送文字消息
+        if (isGroupChat) {
+          const groupId = chatId.replace("group-", "");
+          io.to(`group:${groupId}`).emit("message:new", textMessageWithSender);
+        } else if (isFriendChat) {
+          const recipientId = chatId.replace("friend-", "");
+          const recipientSocketId = onlineUserService.getSocketId(recipientId);
+          if (recipientSocketId) {
+            io.to(recipientSocketId).emit("message:new", textMessageWithSender);
+          }
+        }
+
+        const senderSocketIdForText = onlineUserService.getSocketId(req.user!.id);
+        if (senderSocketIdForText) {
+          io.to(senderSocketIdForText).emit("message:new", textMessageWithSender);
+        }
+      }
+
       res.json({
         message: messageWithSender,
         url,
@@ -269,7 +306,7 @@ ossRouter.post(
       }
 
       // 获取聊天相关参数
-      const { chatId } = req.body;
+      const { chatId, message } = req.body; // message 为可选的附带文字消息
       if (!chatId) {
         return res.status(400).json({ error: "缺少chatId参数" });
       }
@@ -389,6 +426,43 @@ ossRouter.post(
       const senderSocketId = onlineUserService.getSocketId(req.user!.id);
       if (senderSocketId) {
         io.to(senderSocketId).emit("message:new", messageWithSender);
+      }
+
+      // 如果有附带的文字消息，也发送文字消息
+      if (message && message.trim()) {
+        const [textMessage] = await db
+          .insert(messagesTable)
+          .values({
+            content: message.trim(),
+            senderId: req.user!.id,
+            recipientId: isFriendChat ? chatId.replace("friend-", "") : null,
+            groupId: isGroupChat ? chatId.replace("group-", "") : null,
+            type: "text",
+            isRead: false,
+          })
+          .returning();
+
+        const textMessageWithSender = {
+          ...textMessage,
+          sender,
+        };
+
+        // 推送文字消息
+        if (isGroupChat) {
+          const groupId = chatId.replace("group-", "");
+          io.to(`group:${groupId}`).emit("message:new", textMessageWithSender);
+        } else if (isFriendChat) {
+          const recipientId = chatId.replace("friend-", "");
+          const recipientSocketId = onlineUserService.getSocketId(recipientId);
+          if (recipientSocketId) {
+            io.to(recipientSocketId).emit("message:new", textMessageWithSender);
+          }
+        }
+
+        const senderSocketIdForText = onlineUserService.getSocketId(req.user!.id);
+        if (senderSocketIdForText) {
+          io.to(senderSocketIdForText).emit("message:new", textMessageWithSender);
+        }
       }
 
       res.json({

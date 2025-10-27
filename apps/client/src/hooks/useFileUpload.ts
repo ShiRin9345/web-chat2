@@ -8,6 +8,7 @@ export interface UploadState {
   uploadProgress: number;
   uploadError: string | null;
   currentFile: File | null;
+  uploadQueue: Array<{ file: File; type: "image" | "file"; progress: number }>; // 上传队列
 }
 
 export interface UseFileUploadOptions {
@@ -28,6 +29,9 @@ export function useFileUpload({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [currentFile, setCurrentFile] = useState<File | null>(null);
+  const [uploadQueue, setUploadQueue] = useState<
+    Array<{ file: File; type: "image" | "file"; progress: number }>
+  >([]); // 上传队列
 
   // 监听后端上传进度 WebSocket 事件
   useEffect(() => {
@@ -50,53 +54,59 @@ export function useFileUpload({
     };
   }, [currentUserId]);
 
-  // 处理文件上传
+  // 处理文件上传（支持并发上传）
   const handleFileUpload = useCallback(
     async (file: File, type: "image" | "file") => {
+      // 添加到上传队列
+      setUploadQueue((prev) => [...prev, { file, type, progress: 0 }]);
       setUploading(true);
       setUploadingType(type);
-      setUploadProgress(0);
-      setUploadError(null);
-      setCurrentFile(file);
 
       try {
         // 上传文件到OSS（后端会自动保存消息到数据库）
-        // 注：对于小文件 (≤5MB) 使用本地进度，大文件 (>5MB) 会通过 WebSocket 事件接收进度
-        await uploadFileToOSS(
-          file,
-          type,
-          currentUserId,
-          chatId,
-          (progress) => {
-            // 本地上传进度（Axios 的 onUploadProgress）
-            setUploadProgress(progress);
-          }
-        );
+        await uploadFileToOSS(file, type, currentUserId, chatId, (progress) => {
+          // 更新该文件的上传进度
+          setUploadQueue((prev) =>
+            prev.map((item) =>
+              item.file === file ? { ...item, progress } : item
+            )
+          );
+        });
 
-        // 上传成功，调用成功回调（如果有）
+        // 上传成功，从队列中移除
+        setUploadQueue((prev) => prev.filter((item) => item.file !== file));
+
+        // 调用成功回调
         onSuccess?.();
 
-        // 重置状态
-        setUploading(false);
-        setUploadingType(null);
-        setUploadProgress(0);
-        setCurrentFile(null);
+        // 如果队列为空，重置状态
+        setUploadQueue((prev) => {
+          if (prev.length === 0) {
+            setUploading(false);
+            setUploadingType(null);
+            setUploadProgress(0);
+            setCurrentFile(null);
+          }
+          return prev;
+        });
       } catch (error: any) {
         console.error("文件上传失败:", error);
-        setUploadError(error.message || "上传失败");
-        setUploading(false);
+        // 从队列中移除失败的文件
+        setUploadQueue((prev) => prev.filter((item) => item.file !== file));
+        setUploadError(`${file.name}: ${error.message || "上传失败"}`);
       }
     },
     [currentUserId, chatId, onSuccess]
   );
 
-  // 取消上传
+  // 取消所有上传
   const cancelUpload = useCallback(() => {
     setUploading(false);
     setUploadingType(null);
     setUploadProgress(0);
     setUploadError(null);
     setCurrentFile(null);
+    setUploadQueue([]);
   }, []);
 
   // 清除错误
@@ -111,6 +121,7 @@ export function useFileUpload({
     uploadProgress,
     uploadError,
     currentFile,
+    uploadQueue, // 返回上传队列
     // 方法
     handleFileUpload,
     cancelUpload,

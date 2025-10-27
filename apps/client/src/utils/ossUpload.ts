@@ -4,7 +4,7 @@ const API_BASE = "http://localhost:3001/api";
 
 // 文件大小限制 (字节)
 const MAX_IMAGE_SIZE = 20 * 1024 * 1024; // 20MB
-const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
 
 // 文件验证结果类型
 export interface ValidationResult {
@@ -46,7 +46,9 @@ export function validateFile(
 
   // 禁止的文件类型黑名单
   const forbiddenExtensions = [".exe", ".bat", ".sh", ".cmd", ".dll", ".so"];
-  const fileExtension = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
+  const fileExtension = file.name
+    .substring(file.name.lastIndexOf("."))
+    .toLowerCase();
   if (forbiddenExtensions.includes(fileExtension)) {
     return { valid: false, error: "不支持该文件类型" };
   }
@@ -77,9 +79,10 @@ export async function uploadFileToOSS(
     formData.append("chatId", chatId); // 添加 chatId 参数
 
     // 选择上传接口
-    const uploadUrl = fileType === "image" 
-      ? `${API_BASE}/oss/upload/image`
-      : `${API_BASE}/oss/upload/file`;
+    const uploadUrl =
+      fileType === "image"
+        ? `${API_BASE}/oss/upload/image`
+        : `${API_BASE}/oss/upload/file`;
 
     // 上传文件
     const response = await axios.post<FileInfo & { message: any }>(
@@ -92,7 +95,9 @@ export async function uploadFileToOSS(
         },
         onUploadProgress: (progressEvent) => {
           if (onProgress && progressEvent.total) {
-            const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            const progress = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total
+            );
             onProgress(progress);
           }
         },
@@ -114,7 +119,9 @@ export async function uploadFileToOSS(
     } else if (error.code === "ECONNABORTED") {
       throw new Error("上传超时，请检查网络连接");
     } else {
-      throw new Error(error.response?.data?.error || error.message || "上传失败，请稍后重试");
+      throw new Error(
+        error.response?.data?.error || error.message || "上传失败，请稍后重试"
+      );
     }
   }
 }

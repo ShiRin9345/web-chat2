@@ -34,24 +34,31 @@ export function MessageInput({
     uploadProgress,
     uploadError,
     currentFile,
+    uploadQueue, // 上传队列
     handleFileUpload,
     cancelUpload,
     clearError,
   } = uploadState;
 
   const handleSend = () => {
-    if (!content.trim() || disabled || uploading) return;
+    if (!content.trim() || disabled) return; // 移除 uploading 检查，允许上传时发送消息
 
     onSend(content, "text");
     setContent("");
   };
 
-  // 处理图片选择
+  // 处理图片选择（支持多选）
   const handleImageSelect = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-    await handleFileUpload(file, "image");
+    // 批量上传，但不阻塞界面（异步进行）
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (file) {
+        handleFileUpload(file, "image"); // 不用 await，允许并发上传
+      }
+    }
 
     // 重置input,允许重复上传同一文件
     if (imageInputRef.current) {
@@ -59,12 +66,18 @@ export function MessageInput({
     }
   };
 
-  // 处理文件选择
+  // 处理文件选择（支持多选）
   const handleFileSelect = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-    await handleFileUpload(file, "file");
+    // 批量上传，但不阻塞界面（异步进行）
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (file) {
+        handleFileUpload(file, "file"); // 不用 await，允许并发上传
+      }
+    }
 
     // 重置input
     if (fileInputRef.current) {
@@ -83,35 +96,32 @@ export function MessageInput({
 
   return (
     <div className="border-t p-4">
-      {/* 上传进度条 */}
-      {uploading && currentFile && (
-        <div className="mb-3 p-3 bg-muted rounded-lg">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{currentFile.name}</p>
-              <p className="text-xs text-muted-foreground">
-                {formatFileSize(currentFile.size)}
-              </p>
+      {/* 上传队列显示 */}
+      {uploadQueue && uploadQueue.length > 0 && (
+        <div className="mb-3 space-y-2 max-h-40 overflow-y-auto">
+          {uploadQueue.map((item, index) => (
+            <div key={index} className="p-2 bg-muted rounded-lg">
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium truncate">
+                    {item.file.name}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatFileSize(item.file.size)}
+                  </p>
+                </div>
+                <span className="text-xs text-muted-foreground ml-2">
+                  {item.progress}%
+                </span>
+              </div>
+              <div className="w-full bg-background rounded-full h-1.5 overflow-hidden">
+                <div
+                  className="bg-primary h-full transition-all duration-300"
+                  style={{ width: `${item.progress}%` }}
+                />
+              </div>
             </div>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              className="h-6 w-6 ml-2"
-              onClick={cancelUpload}
-            >
-              <X className="h-3 w-3" />
-            </Button>
-          </div>
-          <div className="w-full bg-background rounded-full h-2 overflow-hidden">
-            <div
-              className="bg-primary h-full transition-all duration-300"
-              style={{ width: `${uploadProgress}%` }}
-            />
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            上传中 {uploadProgress}%
-          </p>
+          ))}
         </div>
       )}
 
@@ -139,6 +149,7 @@ export function MessageInput({
             ref={imageInputRef}
             type="file"
             accept="image/*"
+            multiple // 支持多选
             className="hidden"
             onChange={handleImageSelect}
           />
@@ -146,7 +157,7 @@ export function MessageInput({
             type="button"
             size="icon"
             variant="ghost"
-            disabled={disabled || uploading}
+            disabled={disabled} // 移除 uploading 检查
             className="h-9 w-9"
             title="发送图片"
             onClick={() => imageInputRef.current?.click()}
@@ -162,6 +173,7 @@ export function MessageInput({
           <input
             ref={fileInputRef}
             type="file"
+            multiple // 支持多选
             className="hidden"
             onChange={handleFileSelect}
           />
@@ -169,7 +181,7 @@ export function MessageInput({
             type="button"
             size="icon"
             variant="ghost"
-            disabled={disabled || uploading}
+            disabled={disabled} // 移除 uploading 检查
             className="h-9 w-9"
             title="发送文件"
             onClick={() => fileInputRef.current?.click()}
@@ -201,7 +213,7 @@ export function MessageInput({
           type="button"
           size="icon"
           onClick={handleSend}
-          disabled={disabled || !content.trim() || uploading}
+          disabled={disabled || !content.trim()} // 移除 uploading 检查
           className="h-9 w-9"
         >
           <Send className="h-4 w-4" />
