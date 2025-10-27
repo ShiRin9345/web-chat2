@@ -32,6 +32,7 @@ export function ChatMessages({ chatId, currentUserId }: ChatMessagesProps) {
   const previousScrollHeightRef = useRef(0);
   const isInitialLoadRef = useRef(true);
   const previousMessageCountRef = useRef(0);
+  const isLoadingMoreRef = useRef(false); // 标记是否正在加载历史消息
 
   // 将分页消息转换为渲染数组
   const messages = transformMessagesToRenderArray(data?.pages);
@@ -87,12 +88,20 @@ export function ChatMessages({ chatId, currentUserId }: ChatMessagesProps) {
     // 跳过初次加载和加载更多时
     if (isInitialLoadRef.current || isFetchingNextPage) return;
 
+    // 如果正在加载历史消息，不触发滚动
+    if (isLoadingMoreRef.current) {
+      // 加载完成，重置标记
+      isLoadingMoreRef.current = false;
+      previousMessageCountRef.current = messages.length;
+      return;
+    }
+
     // 如果消息数量增加，检查是否需要滚动
     if (messages.length > previousMessageCountRef.current) {
       // 计算新增的消息数量
-      const newMessagesCount = messages.length - previousMessageCountRef.current;
-      
-      // 如果新增消息数量大于1，很可能是加载历史消息，不滚动
+      const newMessagesCount =
+        messages.length - previousMessageCountRef.current;
+
       // 只有新增1条消息时，才可能是新发送的消息
       if (newMessagesCount === 1) {
         // 获取最新的消息（数组第一个是最新的）
@@ -245,10 +254,11 @@ export function ChatMessages({ chatId, currentUserId }: ChatMessagesProps) {
     };
   }, [socket, chatId, currentUserId, queryClient, isAtBottom, scrollToBottom]);
 
-  // 加载历史消息时保持滚动位置
+  // 加载历史消息时保存滚动位置
   useEffect(() => {
     if (isFetchingNextPage && scrollContainerRef.current) {
       previousScrollHeightRef.current = scrollContainerRef.current.scrollHeight;
+      isLoadingMoreRef.current = true; // 标记正在加载历史消息
     }
   }, [isFetchingNextPage]);
 
