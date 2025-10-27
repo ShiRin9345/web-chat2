@@ -123,12 +123,9 @@ export function useRemoveFriend() {
 
   return useMutation({
     mutationFn: async (friendId: string) => {
-      const response = await axios.delete(
-        `${API_BASE}/friends/${friendId}`,
-        {
-          withCredentials: true, // 发送 cookies
-        }
-      );
+      const response = await axios.delete(`${API_BASE}/friends/${friendId}`, {
+        withCredentials: true, // 发送 cookies
+      });
       return response.data;
     },
     onSuccess: () => {

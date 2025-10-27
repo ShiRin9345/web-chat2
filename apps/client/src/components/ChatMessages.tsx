@@ -89,17 +89,24 @@ export function ChatMessages({ chatId, currentUserId }: ChatMessagesProps) {
 
     // 如果消息数量增加，检查是否需要滚动
     if (messages.length > previousMessageCountRef.current) {
-      // 获取最新的消息
-      const latestMessage = messages[0];
+      // 计算新增的消息数量
+      const newMessagesCount = messages.length - previousMessageCountRef.current;
+      
+      // 如果新增消息数量大于1，很可能是加载历史消息，不滚动
+      // 只有新增1条消息时，才可能是新发送的消息
+      if (newMessagesCount === 1) {
+        // 获取最新的消息（数组第一个是最新的）
+        const latestMessage = messages[0];
 
-      // 如果是自己发送的消息（包括临时消息），强制滚动到底部
-      if (latestMessage && latestMessage.senderId === currentUserId) {
-        setTimeout(() => scrollToBottom("smooth"), 50);
-      } else {
-        // 别人发送的消息，只在底部时滚动
-        const wasAtBottom = isAtBottom();
-        if (wasAtBottom) {
+        // 如果是自己发送的消息（包括临时消息），强制滚动到底部
+        if (latestMessage && latestMessage.senderId === currentUserId) {
           setTimeout(() => scrollToBottom("smooth"), 50);
+        } else {
+          // 别人发送的消息，只在底部时滚动
+          const wasAtBottom = isAtBottom();
+          if (wasAtBottom) {
+            setTimeout(() => scrollToBottom("smooth"), 50);
+          }
         }
       }
     }

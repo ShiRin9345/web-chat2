@@ -16,6 +16,8 @@ interface ChatInfo {
   avatar: string | null;
   isOnline: boolean;
   creatorId?: string; // 群主 ID（仅群聊）
+  email?: string | null; // 好友邮箱（仅好友）
+  code?: string | null; // 好友账号（仅好友）
 }
 
 interface UseChatInfoReturn {
@@ -140,6 +142,12 @@ export function useChatInfo({ chatId }: UseChatInfoParams): UseChatInfoReturn {
       isOnline,
       creatorId:
         type === "group" && groupInfo ? groupInfo.creatorId : undefined,
+      email:
+        type === "friend" && finalFriendInfo
+          ? finalFriendInfo.email
+          : undefined,
+      code:
+        type === "friend" && finalFriendInfo ? finalFriendInfo.code : undefined,
     };
   }, [type, id, finalFriendInfo, groupInfo, onlineFriends]);
 

@@ -11,6 +11,7 @@ import { useChatInfo } from "@/hooks/useChatInfo";
 import { ChatMessages } from "@/components/ChatMessages";
 import { MessageInput } from "@/components/MessageInput";
 import { GroupInfoSheet } from "@/components/GroupInfoSheet";
+import { FriendInfoSheet } from "@/components/FriendInfoSheet";
 import { useSendMessage } from "@/hooks/useSendMessage";
 import { useFileUpload } from "@/hooks/useFileUpload";
 import { authClient } from "@/lib/auth-client";
@@ -42,6 +43,8 @@ function ChatPage() {
 
   // 群信息 Sheet 状态
   const [isGroupInfoOpen, setIsGroupInfoOpen] = useState(false);
+  // 好友信息 Sheet 状态
+  const [isFriendInfoOpen, setIsFriendInfoOpen] = useState(false);
 
   // 文件上传状态和方法，在 MessageInput 和 DropProvider 之间共享
   const uploadState = useFileUpload({
@@ -102,6 +105,8 @@ function ChatPage() {
               onClick={() => {
                 if (chatInfo.type === "group") {
                   setIsGroupInfoOpen(true);
+                } else if (chatInfo.type === "friend") {
+                  setIsFriendInfoOpen(true);
                 }
               }}
             >
@@ -129,6 +134,20 @@ function ChatPage() {
             groupName={chatInfo.name}
             groupAvatar={chatInfo.avatar}
             currentUserId={currentUserId}
+            creatorId={chatInfo.creatorId || ""}
+          />
+        )}
+
+        {/* 好友信息 Sheet */}
+        {chatInfo.type === "friend" && (
+          <FriendInfoSheet
+            open={isFriendInfoOpen}
+            onOpenChange={setIsFriendInfoOpen}
+            friendId={chatInfo.id}
+            friendName={chatInfo.name}
+            friendAvatar={chatInfo.avatar}
+            friendEmail={chatInfo.email}
+            friendCode={chatInfo.code}
           />
         )}
       </div>
