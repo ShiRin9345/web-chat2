@@ -68,6 +68,16 @@ export function useFileUpload({
   // 处理文件上传（支持并发上传）
   const handleFileUpload = useCallback(
     async (file: File, type: "image" | "file") => {
+      // 检查队列中是否已存在同名文件
+      const isDuplicate = uploadQueue.some(
+        (item) => item.file.name === file.name && item.file.size === file.size
+      );
+
+      if (isDuplicate) {
+        setUploadError(`文件 "${file.name}" 已在上传队列中`);
+        return;
+      }
+
       // 添加到上传队列
       setUploadQueue((prev) => [...prev, { file, type, progress: 0 }]);
       setUploading(true);
@@ -114,7 +124,7 @@ export function useFileUpload({
         setUploadError(`${file.name}: ${error.message || "上传失败"}`);
       }
     },
-    [currentUserId, chatId, onSuccess]
+    [currentUserId, chatId, onSuccess, uploadQueue]
   );
 
   // 取消所有上传
