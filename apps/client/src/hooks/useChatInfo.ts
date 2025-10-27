@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSocket } from "@/providers/SocketProvider";
 import { useCallStore } from "@/stores/call";
 import { userQueryOptions } from "@/queries/users";
-import type { User } from "@workspace/database";
+import type { User, Group } from "@workspace/database";
 
 interface UseChatInfoParams {
   chatId: string;
@@ -66,6 +66,20 @@ export function useChatInfo({ chatId }: UseChatInfoParams): UseChatInfoReturn {
     return queryClient.getQueryData<User>(userQueryOptions(id).queryKey);
   }, [type, id, queryClient]);
 
+  // 从 groups 缓存中获取群聊信息
+  const groupInfo = useMemo(() => {
+    if (type !== "group" || !id) return null;
+
+    // 从 groups 缓存中查找
+    const groupsData = queryClient.getQueryData<Group[]>(["groups"]);
+    if (groupsData) {
+      const group = groupsData.find((g) => g.id === id);
+      if (group) return group;
+    }
+
+    return null;
+  }, [type, id, queryClient]);
+
   // 只有在缓存中没有找到时才发起请求
   const { data: fetchedFriendInfo } = useQuery({
     ...userQueryOptions(id),
@@ -111,14 +125,20 @@ export function useChatInfo({ chatId }: UseChatInfoParams): UseChatInfoReturn {
       name:
         type === "friend" && finalFriendInfo
           ? finalFriendInfo.name
+          : type === "group" && groupInfo
+          ? groupInfo.name
           : type === "group"
           ? "群聊"
           : "未知",
       avatar:
-        type === "friend" && finalFriendInfo ? finalFriendInfo.image : null,
+        type === "friend" && finalFriendInfo
+          ? finalFriendInfo.image
+          : type === "group" && groupInfo
+          ? groupInfo.avatar
+          : null,
       isOnline,
     };
-  }, [type, id, finalFriendInfo, onlineFriends]);
+  }, [type, id, finalFriendInfo, groupInfo, onlineFriends]);
 
   // 发起视频通话
   const handleVideoCall = () => {
