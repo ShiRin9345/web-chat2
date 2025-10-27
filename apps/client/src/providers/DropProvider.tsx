@@ -1,7 +1,7 @@
 import { createContext, useContext } from "react";
 import { useDropzone } from "react-dropzone";
-import { uploadFileToOSS } from "@/utils/ossUpload";
 import { useSendMessage } from "@/hooks/useSendMessage";
+import type { useFileUpload } from "@/hooks/useFileUpload";
 import { Upload, ImageIcon, FileIcon } from "lucide-react";
 import { cn } from "@workspace/ui/lib/utils";
 
@@ -21,6 +21,7 @@ interface DropProviderProps {
   currentUserId: string;
   currentUserName: string;
   currentUserImage: string | null;
+  uploadState: ReturnType<typeof useFileUpload>;
 }
 
 export function DropProvider({
@@ -29,6 +30,7 @@ export function DropProvider({
   currentUserId,
   currentUserName,
   currentUserImage,
+  uploadState,
 }: DropProviderProps) {
   const { sendMessage } = useSendMessage(
     chatId,
@@ -37,34 +39,17 @@ export function DropProvider({
     currentUserImage
   );
 
+  // 使用传入的上传状态
+  const { handleFileUpload } = uploadState;
+
   const onDrop = async (uploadFiles: File[]) => {
     if (uploadFiles.length === 0) return;
 
+    // 上传每个文件
     for (const file of uploadFiles) {
-      try {
-        // 判断是图片还是文件
-        const isImage = file.type.startsWith("image/");
-        const fileType = isImage ? "image" : "file";
-
-        // 上传文件到 OSS
-        const fileUrl = await uploadFileToOSS(file, fileType, currentUserId);
-
-        // 发送消息
-        if (isImage) {
-          sendMessage(fileUrl, "image");
-        } else {
-          // 文件消息需要包含文件信息
-          const fileInfo = {
-            url: fileUrl,
-            name: file.name,
-            size: file.size,
-          };
-          sendMessage(JSON.stringify(fileInfo), "file");
-        }
-      } catch (error) {
-        console.error("文件上传失败:", error);
-        // TODO: 显示错误提示
-      }
+      const isImage = file.type.startsWith("image/");
+      const fileType = isImage ? "image" : "file";
+      await handleFileUpload(file, fileType);
     }
   };
 

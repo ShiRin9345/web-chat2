@@ -12,6 +12,7 @@ import { ChatMessages } from "@/components/ChatMessages";
 import { MessageInput } from "@/components/MessageInput";
 import { GroupInfoSheet } from "@/components/GroupInfoSheet";
 import { useSendMessage } from "@/hooks/useSendMessage";
+import { useFileUpload } from "@/hooks/useFileUpload";
 import { authClient } from "@/lib/auth-client";
 import { DropProvider } from "@/providers/DropProvider";
 
@@ -42,12 +43,19 @@ function ChatPage() {
   // 群信息 Sheet 状态
   const [isGroupInfoOpen, setIsGroupInfoOpen] = useState(false);
 
+  // 文件上传状态和方法，在 MessageInput 和 DropProvider 之间共享
+  const uploadState = useFileUpload({
+    currentUserId,
+    onSuccess: sendMessage,
+  });
+
   return (
     <DropProvider
       chatId={chatId}
       currentUserId={currentUserId}
       currentUserName={currentUserName}
       currentUserImage={currentUserImage}
+      uploadState={uploadState}
     >
       <div className="h-full flex flex-col">
         {/* 聊天头部 */}
@@ -105,7 +113,11 @@ function ChatPage() {
         <ChatMessages chatId={chatId} currentUserId={currentUserId} />
 
         {/* 消息输入 */}
-        <MessageInput onSend={sendMessage} currentUserId={currentUserId} />
+        <MessageInput
+          onSend={sendMessage}
+          currentUserId={currentUserId}
+          uploadState={uploadState}
+        />
 
         {/* 群信息 Sheet */}
         {chatInfo.type === "group" && (

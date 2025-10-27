@@ -5,13 +5,15 @@ import { Textarea } from "@workspace/ui/components/textarea";
 import { Kbd, KbdGroup } from "@workspace/ui/components/kbd";
 import { Send, Image as ImageIcon, Paperclip, X, Loader2 } from "lucide-react";
 import { cn } from "@workspace/ui/lib/utils";
-import { uploadFileToOSS, formatFileSize } from "../utils/ossUpload";
+import { formatFileSize } from "../utils/ossUpload";
+import type { useFileUpload } from "../hooks/useFileUpload";
 
 interface MessageInputProps {
   onSend: (content: string, type?: "text" | "image" | "file") => void;
   disabled?: boolean;
   placeholder?: string;
-  currentUserId: string; // 添加userId参数
+  currentUserId: string;
+  uploadState: ReturnType<typeof useFileUpload>;
 }
 
 export function MessageInput({
@@ -19,17 +21,23 @@ export function MessageInput({
   disabled = false,
   placeholder = "输入消息...",
   currentUserId,
+  uploadState,
 }: MessageInputProps) {
   const [content, setContent] = useState("");
-  const [uploading, setUploading] = useState(false);
-  const [uploadingType, setUploadingType] = useState<"image" | "file" | null>(
-    null
-  );
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [currentFile, setCurrentFile] = useState<File | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 使用传入的上传状态
+  const {
+    uploading,
+    uploadingType,
+    uploadProgress,
+    uploadError,
+    currentFile,
+    handleFileUpload,
+    cancelUpload,
+    clearError,
+  } = uploadState;
 
   const handleSend = () => {
     if (!content.trim() || disabled || uploading) return;
@@ -64,60 +72,6 @@ export function MessageInput({
     }
   };
 
-  // 处理文件上传
-  const handleFileUpload = async (file: File, type: "image" | "file") => {
-    setUploading(true);
-    setUploadingType(type);
-    setUploadProgress(0);
-    setUploadError(null);
-    setCurrentFile(file);
-
-    try {
-      // 上传文件到OSS
-      const fileUrl = await uploadFileToOSS(
-        file,
-        type,
-        currentUserId,
-        (progress) => {
-          setUploadProgress(progress);
-        }
-      );
-
-      // 上传成功后发送消息
-      if (type === "image") {
-        onSend(fileUrl, "image");
-      } else {
-        // 文件消息需要包含元信息
-        const fileInfo = {
-          name: file.name,
-          url: fileUrl,
-          size: file.size,
-          mimeType: file.type,
-        };
-        onSend(JSON.stringify(fileInfo), "file");
-      }
-
-      // 重置状态
-      setUploading(false);
-      setUploadingType(null);
-      setUploadProgress(0);
-      setCurrentFile(null);
-    } catch (error: any) {
-      console.error("文件上传失败:", error);
-      setUploadError(error.message || "上传失败");
-      setUploading(false);
-    }
-  };
-
-  // 取消上传
-  const handleCancelUpload = () => {
-    setUploading(false);
-    setUploadingType(null);
-    setUploadProgress(0);
-    setUploadError(null);
-    setCurrentFile(null);
-  };
-
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     // Enter 发送，Ctrl/Cmd + Enter 换行
     if (e.key === "Enter" && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
@@ -144,7 +98,7 @@ export function MessageInput({
               size="icon"
               variant="ghost"
               className="h-6 w-6 ml-2"
-              onClick={handleCancelUpload}
+              onClick={cancelUpload}
             >
               <X className="h-3 w-3" />
             </Button>
@@ -170,7 +124,7 @@ export function MessageInput({
             size="icon"
             variant="ghost"
             className="h-6 w-6"
-            onClick={() => setUploadError(null)}
+            onClick={clearError}
           >
             <X className="h-3 w-3" />
           </Button>
