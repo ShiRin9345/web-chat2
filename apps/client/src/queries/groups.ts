@@ -4,6 +4,16 @@ import type { Group, GroupMember } from "@workspace/database";
 
 const API_BASE = "http://localhost:3001/api";
 
+// 群成员信息类型（包含用户信息）
+export interface GroupMemberWithUser {
+  id: string;
+  name: string;
+  email: string;
+  image: string | null;
+  role: string;
+  joinedAt: Date;
+}
+
 // 获取群聊列表
 export function useGroups() {
   return useQuery<Group[]>({
@@ -69,7 +79,7 @@ export function useJoinGroup() {
 
 // 获取群成员列表
 export function useGroupMembers(groupId: string) {
-  return useQuery<GroupMember[]>({
+  return useQuery<GroupMemberWithUser[]>({
     queryKey: ["groupMembers", groupId],
     queryFn: async () => {
       const response = await axios.get(

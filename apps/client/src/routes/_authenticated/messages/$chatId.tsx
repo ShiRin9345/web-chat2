@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import {
   Avatar,
   AvatarFallback,
@@ -9,6 +10,7 @@ import { Phone, Video, MoreHorizontal } from "lucide-react";
 import { useChatInfo } from "@/hooks/useChatInfo";
 import { ChatMessages } from "@/components/ChatMessages";
 import { MessageInput } from "@/components/MessageInput";
+import { GroupInfoSheet } from "@/components/GroupInfoSheet";
 import { useSendMessage } from "@/hooks/useSendMessage";
 import { authClient } from "@/lib/auth-client";
 
@@ -35,6 +37,9 @@ function ChatPage() {
     currentUserName,
     currentUserImage
   );
+
+  // 群信息 Sheet 状态
+  const [isGroupInfoOpen, setIsGroupInfoOpen] = useState(false);
 
   return (
     <div className="h-full flex flex-col">
@@ -75,7 +80,15 @@ function ChatPage() {
           >
             <Video className="h-4 w-4" />
           </Button>
-          <Button size="sm" variant="ghost">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              if (chatInfo.type === "group") {
+                setIsGroupInfoOpen(true);
+              }
+            }}
+          >
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </div>
@@ -86,6 +99,17 @@ function ChatPage() {
 
       {/* 消息输入 */}
       <MessageInput onSend={sendMessage} currentUserId={currentUserId} />
+
+      {/* 群信息 Sheet */}
+      {chatInfo.type === "group" && (
+        <GroupInfoSheet
+          open={isGroupInfoOpen}
+          onOpenChange={setIsGroupInfoOpen}
+          groupId={chatInfo.id}
+          groupName={chatInfo.name}
+          groupAvatar={chatInfo.avatar}
+        />
+      )}
     </div>
   );
 }
