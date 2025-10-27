@@ -49,6 +49,8 @@ export function ChatMessages({ chatId, currentUserId }: ChatMessagesProps) {
   // 滚动到底部
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     bottomRef.current?.scrollIntoView({ behavior });
+    // 滚动到底部时清空未读数
+    setUnreadCount(0);
   }, []);
 
   // 处理滚动事件
@@ -86,12 +88,8 @@ export function ChatMessages({ chatId, currentUserId }: ChatMessagesProps) {
       if (wasAtBottom) {
         // 等待 DOM 更新后滚动
         setTimeout(() => scrollToBottom("smooth"), 50);
-      } else {
-        // 如果不在底部，增加未读计数
-        setUnreadCount(
-          (prev) => prev + (messages.length - previousMessageCountRef.current)
-        );
       }
+      // 注意：未读数的增加改由 WebSocket 事件直接处理，这里不再处理
     }
 
     previousMessageCountRef.current = messages.length;
@@ -123,6 +121,10 @@ export function ChatMessages({ chatId, currentUserId }: ChatMessagesProps) {
       if (!belongsToCurrentChat) return;
 
       const queryKey = ["messages", chatId];
+
+      // 判断是否是自己发送的消息（乐观更新的确认）
+      const isOwnMessage = message.senderId === currentUserId;
+      const isOptimisticUpdate = message.tempId && isOwnMessage;
 
       // 更新缓存
       queryClient.setQueryData<{
@@ -187,7 +189,19 @@ export function ChatMessages({ chatId, currentUserId }: ChatMessagesProps) {
         };
       });
 
-      // 滚动逻辑已经在 useEffect 中处理，根据消息数量变化自动滚动
+      // 处理滚动和未读计数
+      // 如果是乐观更新的确认消息，不处理滚动（已经处理过了）
+      if (!isOptimisticUpdate) {
+        const wasAtBottom = isAtBottom();
+
+        if (wasAtBottom) {
+          // 在底部，自动滚动
+          setTimeout(() => scrollToBottom("smooth"), 50);
+        } else {
+          // 不在底部，增加未读数
+          setUnreadCount((prev) => prev + 1);
+        }
+      }
     };
 
     socket.on("message:new", handleNewMessage);

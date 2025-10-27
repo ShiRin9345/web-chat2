@@ -23,10 +23,10 @@ export function ScrollToBottomButton({
         aria-label="滚动到底部"
       >
         <ArrowDown className="h-5 w-5" />
-        
+
         {/* 未读消息计数 */}
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 h-5 min-w-5 px-1 flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs font-medium">
+          <span className="absolute -top-1 -right-1 min-h-6 min-w-6 px-1.5 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold shadow-lg border-2 border-background">
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}

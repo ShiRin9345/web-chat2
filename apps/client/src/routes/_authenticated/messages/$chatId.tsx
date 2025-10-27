@@ -85,7 +85,7 @@ function ChatPage() {
       <ChatMessages chatId={chatId} currentUserId={currentUserId} />
 
       {/* 消息输入 */}
-      <MessageInput onSend={sendMessage} />
+      <MessageInput onSend={sendMessage} currentUserId={currentUserId} />
     </div>
   );
 }

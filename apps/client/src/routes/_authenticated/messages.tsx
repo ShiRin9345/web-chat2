@@ -252,12 +252,12 @@ function MessagesLayout() {
                                 <h3 className="text-sm font-medium line-clamp-1 w-full">
                                   {conversation.name}
                                 </h3>
-                                <span className="text-xs text-muted-foreground line-clamp-1">
+                                <span className="text-xs text-muted-foreground  w-full line-clamp-1">
                                   {conversation.lastMessage}
                                 </span>
                               </div>
 
-                              <div className="flex flex-col items-center justify-between mt-1 ml-auto">
+                              <div className="flex flex-col items-center justify-between mt-1 ml-auto ">
                                 <p className="text-xs text-muted-foreground">
                                   {conversation.time}
                                 </p>
