@@ -10,7 +10,7 @@ import type { TempMessage } from "@/queries/messages";
 import {
   CheckIcon,
   CheckCheckIcon,
-  ClockIcon,
+  Loader2,
   AlertCircleIcon,
 } from "lucide-react";
 
@@ -68,16 +68,16 @@ export const MessageItem = memo(function MessageItem({
           {/* 消息状态指示器 - 只有自己的消息显示，放在消息左边 */}
           {isOwnMessage && (
             <div className="flex items-center mb-1">
+              {/* 发送中 - 显示 loader 加载动画 */}
               {isPending && (
-                <ClockIcon className="w-3 h-3 text-muted-foreground animate-pulse" />
+                <Loader2 className="w-3 h-3 text-muted-foreground animate-spin" />
               )}
+              {/* 发送失败 - 显示警告图标 */}
               {isFailed && (
                 <AlertCircleIcon className="w-3 h-3 text-destructive" />
               )}
-              {!isPending && !isFailed && message.isRead && (
-                <CheckCheckIcon className="w-3 h-3 text-primary" />
-              )}
-              {!isPending && !isFailed && !message.isRead && (
+              {/* 发送成功 - 显示对号 */}
+              {!isPending && !isFailed && (
                 <CheckIcon className="w-3 h-3 text-muted-foreground" />
               )}
             </div>

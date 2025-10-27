@@ -31,6 +31,7 @@ export function ChatMessages({ chatId, currentUserId }: ChatMessagesProps) {
   const [unreadCount, setUnreadCount] = useState(0);
   const previousScrollHeightRef = useRef(0);
   const isInitialLoadRef = useRef(true);
+  const previousMessageCountRef = useRef(0);
 
   // 将分页消息转换为渲染数组
   const messages = transformMessagesToRenderArray(data?.pages);
@@ -65,8 +66,30 @@ export function ChatMessages({ chatId, currentUserId }: ChatMessagesProps) {
     if (!isLoading && messages.length > 0 && isInitialLoadRef.current) {
       scrollToBottom("auto");
       isInitialLoadRef.current = false;
+      previousMessageCountRef.current = messages.length;
     }
   }, [isLoading, messages.length, scrollToBottom]);
+
+  // 监听消息数量变化（用于发送消息后立即滚动）
+  useEffect(() => {
+    // 跳过初次加载和加载更多时
+    if (isInitialLoadRef.current || isFetchingNextPage) return;
+
+    // 如果消息数量增加，且当前在底部，则滚动到底部
+    if (messages.length > previousMessageCountRef.current) {
+      const wasAtBottom = isAtBottom();
+      
+      if (wasAtBottom) {
+        // 等待 DOM 更新后滚动
+        setTimeout(() => scrollToBottom("smooth"), 50);
+      } else {
+        // 如果不在底部，增加未读计数
+        setUnreadCount((prev) => prev + (messages.length - previousMessageCountRef.current));
+      }
+    }
+
+    previousMessageCountRef.current = messages.length;
+  }, [messages.length, isFetchingNextPage, isAtBottom, scrollToBottom]);
 
   // 监听 WebSocket 新消息
   useEffect(() => {
@@ -158,17 +181,7 @@ export function ChatMessages({ chatId, currentUserId }: ChatMessagesProps) {
         };
       });
 
-      // 滚动策略
-      const wasAtBottom = isAtBottom();
-      const isSentByCurrentUser = message.senderId === currentUserId;
-
-      if (isSentByCurrentUser || wasAtBottom) {
-        // 等待 DOM 更新后滚动
-        setTimeout(() => scrollToBottom("smooth"), 100);
-      } else {
-        // 增加未读计数
-        setUnreadCount((prev) => prev + 1);
-      }
+      // 滚动逻辑已经在 useEffect 中处理，根据消息数量变化自动滚动
     };
 
     socket.on("message:new", handleNewMessage);

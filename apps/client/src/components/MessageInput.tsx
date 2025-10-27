@@ -26,11 +26,12 @@ export function MessageInput({
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    // Ctrl/Cmd + Enter 发送
-    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+    // Enter 发送，Ctrl/Cmd + Enter 换行
+    if (e.key === "Enter" && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
+    // Ctrl/Cmd + Enter 或 Shift + Enter 允许换行（默认行为）
   };
 
   return (
@@ -86,7 +87,7 @@ export function MessageInput({
         </Button>
       </div>
       <p className="text-xs text-muted-foreground mt-2">
-        Ctrl/Cmd + Enter 发送消息
+        Enter 发送消息，Ctrl/Cmd + Enter 换行
       </p>
     </div>
   );
