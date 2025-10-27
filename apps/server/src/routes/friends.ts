@@ -369,4 +369,60 @@ router.get("/user/:userId", authenticateUser, async (req, res) => {
   }
 });
 
+// 删除好友
+router.delete("/:friendId", authenticateUser, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const { friendId } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
+
+    if (!friendId) {
+      return res.status(400).json({ error: "Friend ID is required" });
+    }
+
+    if (userId === friendId) {
+      return res.status(400).json({ error: "Cannot remove yourself" });
+    }
+
+    // 删除双向好友关系
+    await db
+      .delete(friendships)
+      .where(
+        or(
+          and(
+            eq(friendships.userId, userId),
+            eq(friendships.friendId, friendId)
+          ),
+          and(
+            eq(friendships.userId, friendId),
+            eq(friendships.friendId, userId)
+          )
+        )
+      );
+
+    // 通知双方好友关系已解除
+    const io = req.app.get("io");
+    if (io) {
+      const socketId1 = onlineUserService.getSocketId(userId);
+      const socketId2 = onlineUserService.getSocketId(friendId);
+
+      if (socketId1) {
+        io.to(socketId1).emit("friend:removed", friendId);
+      }
+
+      if (socketId2) {
+        io.to(socketId2).emit("friend:removed", userId);
+      }
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error removing friend:", error);
+    res.status(500).json({ error: "Failed to remove friend" });
+  }
+});
+
 export { router as friendsRouter };
