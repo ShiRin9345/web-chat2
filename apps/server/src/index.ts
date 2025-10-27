@@ -9,6 +9,7 @@ import { ossRouter } from "@/routes/oss.ts";
 import { friendsRouter } from "@/routes/friends.ts";
 import { groupsRouter } from "@/routes/groups.ts";
 import { callsRouter } from "@/routes/calls.ts";
+import { messagesRouter } from "@/routes/messages.ts";
 import { SocketService } from "@/services/socket.ts";
 config({ path: ".env.local" });
 
@@ -43,6 +44,7 @@ app.use("/api/oss", ossRouter);
 app.use("/api/friends", friendsRouter);
 app.use("/api/groups", groupsRouter);
 app.use("/api/calls", callsRouter);
+app.use("/api/messages", messagesRouter);
 
 app.get("/check", (_req, res) => {
   res.send("Hello World");

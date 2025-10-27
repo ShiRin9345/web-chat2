@@ -6,6 +6,8 @@ import {
   updateCallRecord,
   validateFriendship,
 } from "./callRecords.js";
+import { db, messages, user, groupMembers } from "@workspace/database";
+import { eq } from "drizzle-orm";
 
 export class SocketService {
   private io: Server;
@@ -25,7 +27,14 @@ export class SocketService {
       );
 
       // 发送消息
-      socket.on("message:send", (data) => this.handleMessageSend(socket, data));
+      socket.on("message:send", (data, callback) => 
+        this.handleMessageSend(socket, data, callback)
+      );
+
+      // 标记消息已读
+      socket.on("message:read", (data) => 
+        this.handleMessageRead(socket, data)
+      );
 
       // 群聊消息
       socket.on("group:message", (data) =>
@@ -93,12 +102,120 @@ export class SocketService {
     }
   }
 
-  private handleMessageSend(_socket: Socket, data: any) {
+  private async handleMessageSend(
+    socket: Socket, 
+    data: {
+      tempId: string;
+      recipientId?: string;
+      groupId?: string;
+      content: string;
+      type: string;
+    },
+    callback?: (response: any) => void
+  ) {
     console.log("收到消息:", data);
-    // TODO: 保存到数据库
-    // 推送给接收者
-    if (data.recipientId) {
-      this.io.to(`user:${data.recipientId}`).emit("message:new", data);
+    const userId = socket.data?.userId;
+
+    if (!userId) {
+      callback?.({ error: "User not authenticated" });
+      return;
+    }
+
+    try {
+      const { tempId, recipientId, groupId, content, type } = data;
+
+      // 验证消息类型
+      if (!recipientId && !groupId) {
+        callback?.({ error: "recipientId or groupId is required" });
+        return;
+      }
+
+      // 保存消息到数据库
+      const [newMessage] = await db
+        .insert(messages)
+        .values({
+          content,
+          senderId: userId,
+          recipientId: recipientId || null,
+          groupId: groupId || null,
+          type: type || "text",
+          isRead: false,
+        })
+        .returning();
+
+      // 获取发送者信息
+      const [senderInfo] = await db
+        .select({
+          id: user.id,
+          name: user.name,
+          image: user.image,
+        })
+        .from(user)
+        .where(eq(user.id, userId))
+        .limit(1);
+
+      const messageWithSender = {
+        ...newMessage,
+        sender: senderInfo,
+        tempId, // 包含临时ID用于前端替换
+      };
+
+      // 推送给接收者
+      if (recipientId) {
+        // 私聊消息
+        const recipientSocketId = onlineUserService.getSocketId(recipientId);
+        if (recipientSocketId) {
+          this.io.to(recipientSocketId).emit("message:new", messageWithSender);
+        }
+      } else if (groupId) {
+        // 群聊消息：推送给所有群成员（除了发送者）
+        const members = await db
+          .select({ userId: groupMembers.userId })
+          .from(groupMembers)
+          .where(eq(groupMembers.groupId, groupId));
+
+        for (const member of members) {
+          if (member.userId !== userId) {
+            const memberSocketId = onlineUserService.getSocketId(member.userId);
+            if (memberSocketId) {
+              this.io.to(memberSocketId).emit("message:new", messageWithSender);
+            }
+          }
+        }
+      }
+
+      // 回调给发送者（包含真实消息数据）
+      callback?.({
+        success: true,
+        message: messageWithSender,
+      });
+    } catch (error) {
+      console.error("保存消息失败:", error);
+      callback?.({ error: "Failed to send message" });
+    }
+  }
+
+  private async handleMessageRead(
+    socket: Socket,
+    data: { messageId: string; recipientId: string }
+  ) {
+    console.log("标记消息已读:", data);
+    const { messageId, recipientId } = data;
+
+    try {
+      // 更新消息已读状态
+      await db
+        .update(messages)
+        .set({ isRead: true })
+        .where(eq(messages.id, messageId));
+
+      // 通知发送者消息已送达并被读取
+      const senderSocketId = onlineUserService.getSocketId(recipientId);
+      if (senderSocketId) {
+        this.io.to(senderSocketId).emit("message:delivered", { messageId });
+      }
+    } catch (error) {
+      console.error("更新消息已读状态失败:", error);
     }
   }
 
