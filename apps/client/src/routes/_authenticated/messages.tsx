@@ -1,5 +1,5 @@
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Avatar,
   AvatarFallback,
@@ -17,8 +17,13 @@ import { Button } from "@workspace/ui/components/button";
 import { Plus, Loader2, MessageSquare, Search } from "lucide-react";
 import { useFriends } from "@/queries/friends";
 import { useGroups } from "@/queries/groups";
+import { useConversations } from "@/queries/messages";
 import { useDialogStore } from "@/stores/dialog";
 import { OnlineStatusIndicator } from "@/components/OnlineStatusIndicator";
+import { useSocket } from "@/providers/SocketProvider";
+import { useQueryClient } from "@tanstack/react-query";
+import type { MessageWithSender } from "@/queries/messages";
+import { authClient } from "@/lib/auth-client";
 
 export const Route = createFileRoute("/_authenticated/messages")({
   component: MessagesLayout,
@@ -28,31 +33,141 @@ function MessagesLayout() {
   const { openDialog } = useDialogStore();
   const { data: friends, isLoading: isLoadingFriends } = useFriends();
   const { data: groups, isLoading: isLoadingGroups } = useGroups();
+  const { data: conversationsData, isLoading: isLoadingConversations } =
+    useConversations();
   const [searchQuery, setSearchQuery] = useState("");
+  const socket = useSocket();
+  const queryClient = useQueryClient();
+  const { data: session } = authClient.useSession();
+  const currentUserId = session?.user?.id || "";
+
+  // 监听 WebSocket 新消息，自动刷新会话列表
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewMessage = (message: MessageWithSender) => {
+      // 乐观更新：直接更新缓存中的会话列表
+      queryClient.setQueryData<{ pages: any[]; pageParams: unknown[] }>(
+        ["conversations"],
+        (oldData) => {
+          if (!oldData || !oldData.pages || !oldData.pages[0]) {
+            return oldData;
+          }
+
+          // 确定会话 ID
+          let conversationId: string;
+          if (message.groupId) {
+            conversationId = `group-${message.groupId}`;
+          } else {
+            // 一对一聊天，使用对方的 ID
+            const otherUserId =
+              message.senderId === currentUserId
+                ? message.recipientId
+                : message.senderId;
+            conversationId = `friend-${otherUserId}`;
+          }
+
+          // 查找或创建会话信息
+          const conversations = [...oldData.pages[0]];
+          const existingIndex = conversations.findIndex(
+            (conv) => conv.conversationId === conversationId
+          );
+
+          const newConvInfo = {
+            conversationId,
+            lastMessage: message.content,
+            lastMessageTime: message.createdAt,
+            lastMessageType: message.type,
+            unreadCount: 0,
+          };
+
+          if (existingIndex >= 0) {
+            // 更新已存在的会话，移到最前面
+            conversations.splice(existingIndex, 1);
+            conversations.unshift(newConvInfo);
+          } else {
+            // 新会话，添加到最前面
+            conversations.unshift(newConvInfo);
+          }
+
+          return {
+            ...oldData,
+            pages: [conversations, ...oldData.pages.slice(1)],
+          };
+        }
+      );
+    };
+
+    socket.on("message:new", handleNewMessage);
+
+    return () => {
+      socket.off("message:new", handleNewMessage);
+    };
+  }, [socket, queryClient, currentUserId]);
+
+  // 获取最新消息数据（第一页）
+  const conversationsMap = useMemo(() => {
+    const map = new Map<
+      string,
+      { lastMessage: string; time: string; unreadCount: number }
+    >();
+
+    if (conversationsData?.pages?.[0]) {
+      for (const conv of conversationsData.pages[0]) {
+        const timeAgo = formatTimeAgo(new Date(conv.lastMessageTime));
+        map.set(conv.conversationId, {
+          lastMessage: conv.lastMessage,
+          time: timeAgo,
+          unreadCount: conv.unreadCount,
+        });
+      }
+    }
+
+    return map;
+  }, [conversationsData]);
 
   // 合并好友和群聊作为会话列表
-  const conversations = [
-    ...(friends || []).map((friend) => ({
-      id: `friend-${friend.id}`,
-      name: friend.name,
-      avatar: friend.image,
-      type: "friend" as const,
-      lastMessage: "暂无消息",
-      time: "刚刚",
-      unreadCount: 0,
-    })),
-    ...(groups || []).map((group) => ({
-      id: `group-${group.id}`,
-      name: group.name,
-      avatar: group.avatar,
-      type: "group" as const,
-      lastMessage: "暂无消息",
-      time: "刚刚",
-      unreadCount: 0,
-    })),
-  ];
+  const conversations = useMemo(() => {
+    const list = [
+      ...(friends || []).map((friend) => {
+        const convId = `friend-${friend.id}`;
+        const convInfo = conversationsMap.get(convId);
+        return {
+          id: convId,
+          name: friend.name,
+          avatar: friend.image,
+          type: "friend" as const,
+          lastMessage: convInfo?.lastMessage || "开始聊天吧",
+          time: convInfo?.time || "",
+          unreadCount: convInfo?.unreadCount || 0,
+        };
+      }),
+      ...(groups || []).map((group) => {
+        const convId = `group-${group.id}`;
+        const convInfo = conversationsMap.get(convId);
+        return {
+          id: convId,
+          name: group.name,
+          avatar: group.avatar,
+          type: "group" as const,
+          lastMessage: convInfo?.lastMessage || "开始聊天吧",
+          time: convInfo?.time || "",
+          unreadCount: convInfo?.unreadCount || 0,
+        };
+      }),
+    ];
 
-  const isLoading = isLoadingFriends || isLoadingGroups;
+    // 按最后消息时间排序（有消息的排在前）
+    return list.sort((a, b) => {
+      if (!a.time && !b.time) return 0;
+      if (!a.time) return 1;
+      if (!b.time) return -1;
+      return 0; // 已经通过 conversationsMap 排序过了
+    });
+  }, [friends, groups, conversationsMap]);
+
+  const isLoading =
+    isLoadingFriends || isLoadingGroups || isLoadingConversations;
 
   // 过滤会话
   const filteredConversations = conversations.filter((conv) =>
@@ -183,4 +298,24 @@ function MessagesLayout() {
       </ResizablePanel>
     </ResizablePanelGroup>
   );
+}
+
+// 格式化相对时间
+function formatTimeAgo(date: Date): string {
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (seconds < 60) return "刚刚";
+  if (minutes < 60) return `${minutes}分钟前`;
+  if (hours < 24) return `${hours}小时前`;
+  if (days < 7) return `${days}天前`;
+
+  // 超过一周显示具体日期
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  return `${month}/${day}`;
 }

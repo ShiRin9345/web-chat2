@@ -131,3 +131,29 @@ export function useMarkMessagesAsRead() {
     },
   });
 }
+
+// 会话信息类型
+export type ConversationInfo = {
+  conversationId: string;
+  lastMessage: string;
+  lastMessageTime: Date;
+  lastMessageType: string;
+  unreadCount: number;
+};
+
+// 获取会话列表的最新消息
+export function useConversations() {
+  return useInfiniteQuery<ConversationInfo[]>({
+    queryKey: ["conversations"],
+    queryFn: async () => {
+      const response = await axios.get(`${API_BASE}/messages/conversations`, {
+        withCredentials: true,
+      });
+      return response.data;
+    },
+    getNextPageParam: () => undefined,
+    initialPageParam: undefined,
+    staleTime: 10000, // 10秒缓存
+    refetchOnWindowFocus: true,
+  });
+}
