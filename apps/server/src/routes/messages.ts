@@ -1,201 +1,170 @@
 import { Router } from "express";
-import { db, messages, user } from "@workspace/database";
-import { eq, and, or, desc, lt } from "drizzle-orm";
-import { authenticateUser } from "@/middleware/auth.ts";
+import { db } from "@workspace/database";
+import { messages as messagesTable, user as userTable } from "@workspace/database/schema";
+import { and, eq, or, lt, desc } from "drizzle-orm";
+import { authenticateUser } from "@/middleware/auth";
 
-const router = Router();
+export const messagesRouter = Router();
 
-// 获取消息列表（支持分页）
-router.get("/", authenticateUser, async (req, res) => {
+// 获取消息列表（分页）
+messagesRouter.get("/", authenticateUser, async (req, res) => {
   try {
     const userId = req.user?.id;
-
     if (!userId) {
-      return res.status(401).json({ error: "User not authenticated" });
+      return res.status(401).json({ error: "未授权" });
     }
 
     const { chatId, cursor, limit = "50" } = req.query;
 
     if (!chatId || typeof chatId !== "string") {
-      return res.status(400).json({ error: "chatId is required" });
+      return res.status(400).json({ error: "chatId 参数必填" });
     }
 
-    const pageLimit = Math.min(Number.parseInt(limit as string), 100);
-
-    // 解析 chatId: friend-{userId} 或 group-{groupId}
-    const [chatType, targetId] = chatId.split("-");
-
-    if (!chatType || !targetId) {
-      return res.status(400).json({ error: "Invalid chatId format" });
+    const pageLimit = Number.parseInt(limit as string, 10);
+    if (Number.isNaN(pageLimit) || pageLimit > 100) {
+      return res.status(400).json({ error: "limit 参数无效或超过最大值 100" });
     }
 
-    // 构建查询条件
-    let whereConditions;
+    // 解析 chatId
+    const isFriendChat = chatId.startsWith("friend-");
+    const isGroupChat = chatId.startsWith("group-");
+
+    if (!isFriendChat && !isGroupChat) {
+      return res.status(400).json({ error: "chatId 格式无效" });
+    }
+
+    let whereCondition;
     
-    if (chatType === "friend") {
-      // 私聊消息：发送者和接收者之间的消息
-      whereConditions = or(
-        and(
-          eq(messages.senderId, userId),
-          eq(messages.recipientId, targetId)
+    if (isFriendChat) {
+      const friendId = chatId.replace("friend-", "");
+      // 一对一聊天：查询双方之间的消息
+      whereCondition = and(
+        or(
+          and(
+            eq(messagesTable.senderId, userId),
+            eq(messagesTable.recipientId, friendId)
+          ),
+          and(
+            eq(messagesTable.senderId, friendId),
+            eq(messagesTable.recipientId, userId)
+          )
         ),
-        and(
-          eq(messages.senderId, targetId),
-          eq(messages.recipientId, userId)
-        )
+        cursor ? lt(messagesTable.createdAt, new Date(cursor as string)) : undefined
       );
-    } else if (chatType === "group") {
-      // 群聊消息
-      whereConditions = eq(messages.groupId, targetId);
     } else {
-      return res.status(400).json({ error: "Invalid chat type" });
-    }
-
-    // 添加游标条件
-    if (cursor && typeof cursor === "string") {
-      whereConditions = and(
-        whereConditions,
-        lt(messages.createdAt, new Date(cursor))
+      const groupId = chatId.replace("group-", "");
+      // 群聊：查询群组消息
+      whereCondition = and(
+        eq(messagesTable.groupId, groupId),
+        cursor ? lt(messagesTable.createdAt, new Date(cursor as string)) : undefined
       );
     }
 
-    // 查询消息（降序排列，最新消息优先）
-    const messageList = await db
+    // 查询消息，按时间降序（最新的在前）
+    const messagesList = await db
       .select({
-        id: messages.id,
-        content: messages.content,
-        senderId: messages.senderId,
-        recipientId: messages.recipientId,
-        groupId: messages.groupId,
-        type: messages.type,
-        isRead: messages.isRead,
-        createdAt: messages.createdAt,
+        id: messagesTable.id,
+        content: messagesTable.content,
+        senderId: messagesTable.senderId,
+        recipientId: messagesTable.recipientId,
+        groupId: messagesTable.groupId,
+        type: messagesTable.type,
+        isRead: messagesTable.isRead,
+        createdAt: messagesTable.createdAt,
         sender: {
-          id: user.id,
-          name: user.name,
-          image: user.image,
+          id: userTable.id,
+          name: userTable.name,
+          image: userTable.image,
         },
       })
-      .from(messages)
-      .leftJoin(user, eq(messages.senderId, user.id))
-      .where(whereConditions)
-      .orderBy(desc(messages.createdAt))
-      .limit(pageLimit + 1); // 多查一条用于判断是否有下一页
+      .from(messagesTable)
+      .innerJoin(userTable, eq(messagesTable.senderId, userTable.id))
+      .where(whereCondition)
+      .orderBy(desc(messagesTable.createdAt))
+      .limit(pageLimit + 1); // 多查询一条用于判断是否还有更多
 
-    // 判断是否有更多数据
-    const hasMore = messageList.length > pageLimit;
-    const resultMessages = hasMore ? messageList.slice(0, pageLimit) : messageList;
+    const hasMore = messagesList.length > pageLimit;
+    const messages = hasMore ? messagesList.slice(0, pageLimit) : messagesList;
 
-    // 获取下一页游标（最后一条消息的创建时间）
-    const lastMessage = resultMessages[resultMessages.length - 1];
-    const nextCursor = hasMore && lastMessage?.createdAt
-      ? lastMessage.createdAt.toISOString()
+    // 计算下一页游标（使用最后一条消息的时间戳）
+    const nextCursor = hasMore && messages.length > 0
+      ? messages[messages.length - 1].createdAt.toISOString()
       : null;
 
     res.json({
-      messages: resultMessages,
+      messages,
       nextCursor,
       hasMore,
     });
   } catch (error) {
-    console.error("Error fetching messages:", error);
-    res.status(500).json({ error: "Failed to fetch messages" });
+    console.error("获取消息列表失败:", error);
+    res.status(500).json({ error: "获取消息列表失败" });
   }
 });
 
-// 标记消息为已读
-router.post("/read/:messageId", authenticateUser, async (req, res) => {
+// 标记单条消息为已读
+messagesRouter.post("/read/:messageId", authenticateUser, async (req, res) => {
   try {
     const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: "未授权" });
+    }
+
     const { messageId } = req.params;
 
-    if (!userId) {
-      return res.status(401).json({ error: "User not authenticated" });
-    }
-
-    if (!messageId) {
-      return res.status(400).json({ error: "Message ID is required" });
-    }
-
-    // 只能标记发给自己的消息为已读
-    const [message] = await db
-      .select()
-      .from(messages)
+    // 只能标记发送给自己的消息为已读
+    await db
+      .update(messagesTable)
+      .set({ isRead: true })
       .where(
         and(
-          eq(messages.id, messageId),
-          or(
-            eq(messages.recipientId, userId),
-            // 群聊消息暂时不处理已读状态，或者需要单独的已读记录表
-          )
+          eq(messagesTable.id, messageId),
+          eq(messagesTable.recipientId, userId)
         )
       );
 
-    if (!message) {
-      return res.status(404).json({ error: "Message not found" });
-    }
-
-    await db
-      .update(messages)
-      .set({ isRead: true })
-      .where(eq(messages.id, messageId));
-
     res.json({ success: true });
   } catch (error) {
-    console.error("Error marking message as read:", error);
-    res.status(500).json({ error: "Failed to mark message as read" });
+    console.error("标记消息已读失败:", error);
+    res.status(500).json({ error: "标记消息已读失败" });
   }
 });
 
 // 批量标记消息为已读
-router.post("/read-batch", authenticateUser, async (req, res) => {
+messagesRouter.post("/read-batch", authenticateUser, async (req, res) => {
   try {
     const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: "未授权" });
+    }
+
     const { chatId } = req.body;
 
-    if (!userId) {
-      return res.status(401).json({ error: "User not authenticated" });
-    }
-
     if (!chatId || typeof chatId !== "string") {
-      return res.status(400).json({ error: "chatId is required" });
+      return res.status(400).json({ error: "chatId 参数必填" });
     }
 
-    const [chatType, targetId] = chatId.split("-");
-
-    if (!chatType || !targetId) {
-      return res.status(400).json({ error: "Invalid chatId format" });
-    }
-
-    let whereConditions;
+    const isFriendChat = chatId.startsWith("friend-");
     
-    if (chatType === "friend") {
-      // 标记好友发给我的未读消息
-      whereConditions = and(
-        eq(messages.senderId, targetId),
-        eq(messages.recipientId, userId),
-        eq(messages.isRead, false)
-      );
-    } else if (chatType === "group") {
-      // 群聊消息标记为已读
-      whereConditions = and(
-        eq(messages.groupId, targetId),
-        eq(messages.isRead, false)
-      );
-    } else {
-      return res.status(400).json({ error: "Invalid chat type" });
+    if (isFriendChat) {
+      const friendId = chatId.replace("friend-", "");
+      // 标记来自好友的所有未读消息为已读
+      await db
+        .update(messagesTable)
+        .set({ isRead: true })
+        .where(
+          and(
+            eq(messagesTable.senderId, friendId),
+            eq(messagesTable.recipientId, userId),
+            eq(messagesTable.isRead, false)
+          )
+        );
     }
-
-    await db
-      .update(messages)
-      .set({ isRead: true })
-      .where(whereConditions);
+    // 注意：群聊消息通常不需要已读状态
 
     res.json({ success: true });
   } catch (error) {
-    console.error("Error marking messages as read:", error);
-    res.status(500).json({ error: "Failed to mark messages as read" });
+    console.error("批量标记消息已读失败:", error);
+    res.status(500).json({ error: "批量标记消息已读失败" });
   }
 });
-
-export { router as messagesRouter };

@@ -1,64 +1,56 @@
 import { useEffect, useRef } from "react";
+import { Loader2Icon } from "lucide-react";
 
 interface LoadMoreTriggerProps {
+  hasNextPage?: boolean;
+  isFetchingNextPage: boolean;
   onLoadMore: () => void;
-  hasMore: boolean;
-  isLoading: boolean;
 }
 
-/**
- * 加载更多触发器组件
- * 使用 IntersectionObserver 检测滚动到顶部
- */
 export function LoadMoreTrigger({
+  hasNextPage,
+  isFetchingNextPage,
   onLoadMore,
-  hasMore,
-  isLoading,
 }: LoadMoreTriggerProps) {
-  const triggerRef = useRef<HTMLDivElement>(null);
+  const observerTarget = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const trigger = triggerRef.current;
-    if (!trigger || !hasMore || isLoading) return;
+    const target = observerTarget.current;
+    if (!target) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
-        const entry = entries[0];
-        if (entry && entry.isIntersecting) {
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
           onLoadMore();
         }
       },
       {
-        root: null,
-        rootMargin: "100px", // 距离触发器100px时就开始加载
-        threshold: 0,
+        threshold: 0.1,
       }
     );
 
-    observer.observe(trigger);
+    observer.observe(target);
 
     return () => {
       observer.disconnect();
     };
-  }, [onLoadMore, hasMore, isLoading]);
+  }, [hasNextPage, isFetchingNextPage, onLoadMore]);
 
-  if (!hasMore) {
+  if (!hasNextPage && !isFetchingNextPage) {
     return (
-      <div className="py-4 text-center text-sm text-muted-foreground">
-        没有更多消息了
+      <div className="flex justify-center py-4">
+        <span className="text-xs text-muted-foreground">已加载全部消息</span>
       </div>
     );
   }
 
   return (
-    <div ref={triggerRef} className="py-4 text-center">
-      {isLoading ? (
-        <div className="flex items-center justify-center gap-2">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <span className="text-sm text-muted-foreground">加载中...</span>
+    <div ref={observerTarget} className="flex justify-center py-4">
+      {isFetchingNextPage && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2Icon className="w-4 h-4 animate-spin" />
+          <span>加载中...</span>
         </div>
-      ) : (
-        <div className="h-1" /> // 占位符
       )}
     </div>
   );

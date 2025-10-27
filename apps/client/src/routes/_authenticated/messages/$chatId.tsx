@@ -11,11 +11,9 @@ import {
   MoreHorizontal,
 } from "lucide-react";
 import { useChatInfo } from "@/hooks/useChatInfo";
-import { useMessages } from "@/hooks/useMessages";
-import { useSendMessage } from "@/hooks/useSendMessage";
-import { useRealtimeMessages } from "@/hooks/useRealtimeMessages";
-import { MessageList } from "@/components/MessageList";
+import { ChatMessages } from "@/components/ChatMessages";
 import { MessageInput } from "@/components/MessageInput";
+import { useSendMessage } from "@/hooks/useSendMessage";
 import { authClient } from "@/lib/auth-client";
 
 export const Route = createFileRoute("/_authenticated/messages/$chatId")({
@@ -23,6 +21,7 @@ export const Route = createFileRoute("/_authenticated/messages/$chatId")({
   validateSearch: (search: Record<string, unknown>) => {
     return search;
   },
+  // 移除 loader，因为 useChatInfo 现在会优先从 friends 缓存中获取数据
 });
 
 function ChatPage() {
@@ -30,30 +29,14 @@ function ChatPage() {
   const { chatInfo, handleVideoCall, handleAudioCall } = useChatInfo({
     chatId,
   });
-
-  // 获取当前用户信息
   const { data: session } = authClient.useSession();
   const currentUserId = session?.user?.id || "";
-
-  // 消息数据
-  const {
-    messages,
-    hasNextPage,
-    isFetchingNextPage,
-    fetchNextPage,
-    isLoading,
-  } = useMessages(chatId);
-
-  // 发送消息
-  const { sendMessage, retryMessage } = useSendMessage(chatId, currentUserId);
-
-  // 监听实时消息
-  useRealtimeMessages(chatId, currentUserId);
+  const { sendMessage } = useSendMessage(chatId, currentUserId);
 
   return (
     <div className="h-full flex flex-col">
       {/* 聊天头部 */}
-      <div className="p-4 border-b flex items-center justify-between flex-shrink-0">
+      <div className="p-4 border-b flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <div className="relative">
             <Avatar className="h-10 w-10">
@@ -96,21 +79,10 @@ function ChatPage() {
       </div>
 
       {/* 消息列表 */}
-      <MessageList
-        messages={messages}
-        currentUserId={currentUserId}
-        hasNextPage={hasNextPage}
-        isFetchingNextPage={isFetchingNextPage}
-        isLoading={isLoading}
-        fetchNextPage={fetchNextPage}
-        onRetryMessage={retryMessage}
-      />
+      <ChatMessages chatId={chatId} currentUserId={currentUserId} />
 
-      {/* 消息输入框 */}
-      <MessageInput
-        onSend={sendMessage}
-        placeholder="输入消息..."
-      />
+      {/* 消息输入 */}
+      <MessageInput onSend={sendMessage} />
     </div>
   );
 }

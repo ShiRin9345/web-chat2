@@ -6,7 +6,8 @@ import {
   updateCallRecord,
   validateFriendship,
 } from "./callRecords.js";
-import { db, messages, user, groupMembers } from "@workspace/database";
+import { db } from "@workspace/database";
+import { messages as messagesTable, user as userTable } from "@workspace/database/schema";
 import { eq } from "drizzle-orm";
 
 export class SocketService {
@@ -27,14 +28,7 @@ export class SocketService {
       );
 
       // 发送消息
-      socket.on("message:send", (data, callback) => 
-        this.handleMessageSend(socket, data, callback)
-      );
-
-      // 标记消息已读
-      socket.on("message:read", (data) => 
-        this.handleMessageRead(socket, data)
-      );
+      socket.on("message:send", (data) => this.handleMessageSend(socket, data));
 
       // 群聊消息
       socket.on("group:message", (data) =>
@@ -102,127 +96,120 @@ export class SocketService {
     }
   }
 
-  private async handleMessageSend(
-    socket: Socket, 
-    data: {
-      tempId: string;
-      recipientId?: string;
-      groupId?: string;
-      content: string;
-      type: string;
-    },
-    callback?: (response: any) => void
-  ) {
+  private async handleMessageSend(socket: Socket, data: {
+    recipientId: string;
+    content: string;
+    type?: "text" | "image" | "file";
+    tempId?: string;
+  }) {
     console.log("收到消息:", data);
-    const userId = socket.data?.userId;
+    const senderId = socket.data?.userId;
 
-    if (!userId) {
-      callback?.({ error: "User not authenticated" });
+    if (!senderId) {
+      console.error("发送者ID未知");
       return;
     }
 
     try {
-      const { tempId, recipientId, groupId, content, type } = data;
-
-      // 验证消息类型
-      if (!recipientId && !groupId) {
-        callback?.({ error: "recipientId or groupId is required" });
-        return;
-      }
-
       // 保存消息到数据库
       const [newMessage] = await db
-        .insert(messages)
+        .insert(messagesTable)
         .values({
-          content,
-          senderId: userId,
-          recipientId: recipientId || null,
-          groupId: groupId || null,
-          type: type || "text",
+          content: data.content,
+          senderId,
+          recipientId: data.recipientId,
+          type: data.type || "text",
           isRead: false,
         })
         .returning();
 
       // 获取发送者信息
-      const [senderInfo] = await db
+      const [sender] = await db
         .select({
-          id: user.id,
-          name: user.name,
-          image: user.image,
+          id: userTable.id,
+          name: userTable.name,
+          image: userTable.image,
         })
-        .from(user)
-        .where(eq(user.id, userId))
+        .from(userTable)
+        .where(eq(userTable.id, senderId))
         .limit(1);
 
+      // 构造完整消息对象
       const messageWithSender = {
         ...newMessage,
-        sender: senderInfo,
-        tempId, // 包含临时ID用于前端替换
+        sender,
+        tempId: data.tempId, // 保留临时ID用于客户端替换
       };
 
       // 推送给接收者
-      if (recipientId) {
-        // 私聊消息
-        const recipientSocketId = onlineUserService.getSocketId(recipientId);
-        if (recipientSocketId) {
-          this.io.to(recipientSocketId).emit("message:new", messageWithSender);
-        }
-      } else if (groupId) {
-        // 群聊消息：推送给所有群成员（除了发送者）
-        const members = await db
-          .select({ userId: groupMembers.userId })
-          .from(groupMembers)
-          .where(eq(groupMembers.groupId, groupId));
+      this.io.to(`user:${data.recipientId}`).emit("message:new", messageWithSender);
 
-        for (const member of members) {
-          if (member.userId !== userId) {
-            const memberSocketId = onlineUserService.getSocketId(member.userId);
-            if (memberSocketId) {
-              this.io.to(memberSocketId).emit("message:new", messageWithSender);
-            }
-          }
-        }
-      }
+      // 也推送给发送者（用于多设备同步）
+      socket.emit("message:new", messageWithSender);
 
-      // 回调给发送者（包含真实消息数据）
-      callback?.({
-        success: true,
-        message: messageWithSender,
-      });
+      console.log("消息已保存并推送:", newMessage.id);
     } catch (error) {
       console.error("保存消息失败:", error);
-      callback?.({ error: "Failed to send message" });
+      socket.emit("message:error", { tempId: data.tempId, error: "发送消息失败" });
     }
   }
 
-  private async handleMessageRead(
-    socket: Socket,
-    data: { messageId: string; recipientId: string }
-  ) {
-    console.log("标记消息已读:", data);
-    const { messageId, recipientId } = data;
+  private async handleGroupMessage(socket: Socket, data: {
+    groupId: string;
+    content: string;
+    type?: "text" | "image" | "file";
+    tempId?: string;
+  }) {
+    console.log("收到群聊消息:", data);
+    const senderId = socket.data?.userId;
+
+    if (!senderId) {
+      console.error("发送者ID未知");
+      return;
+    }
 
     try {
-      // 更新消息已读状态
-      await db
-        .update(messages)
-        .set({ isRead: true })
-        .where(eq(messages.id, messageId));
+      // 保存消息到数据库
+      const [newMessage] = await db
+        .insert(messagesTable)
+        .values({
+          content: data.content,
+          senderId,
+          groupId: data.groupId,
+          type: data.type || "text",
+          isRead: false, // 群聊消息通常不跟踪已读状态
+        })
+        .returning();
 
-      // 通知发送者消息已送达并被读取
-      const senderSocketId = onlineUserService.getSocketId(recipientId);
-      if (senderSocketId) {
-        this.io.to(senderSocketId).emit("message:delivered", { messageId });
-      }
+      // 获取发送者信息
+      const [sender] = await db
+        .select({
+          id: userTable.id,
+          name: userTable.name,
+          image: userTable.image,
+        })
+        .from(userTable)
+        .where(eq(userTable.id, senderId))
+        .limit(1);
+
+      // 构造完整消息对象
+      const messageWithSender = {
+        ...newMessage,
+        sender,
+        tempId: data.tempId,
+      };
+
+      // 推送给群组所有成员
+      this.io.to(`group:${data.groupId}`).emit("message:new", messageWithSender);
+
+      // 也推送给发送者
+      socket.emit("message:new", messageWithSender);
+
+      console.log("群聊消息已保存并推送:", newMessage.id);
     } catch (error) {
-      console.error("更新消息已读状态失败:", error);
+      console.error("保存群聊消息失败:", error);
+      socket.emit("message:error", { tempId: data.tempId, error: "发送消息失败" });
     }
-  }
-
-  private handleGroupMessage(_socket: Socket, data: any) {
-    console.log("收到群聊消息:", data);
-    // TODO: 保存到数据库
-    this.io.to(`group:${data.groupId}`).emit("message:new", data);
   }
 
   private handleFriendRequest(_socket: Socket, data: any) {

@@ -1,128 +1,71 @@
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { socket } from "@/lib/socket";
-import { addMessageToCache, replaceMessageInCache } from "./useMessages";
-import type { MessageWithSender } from "@/queries/messages";
+import { useSocket } from "../providers/SocketProvider";
+import type {
+  MessageWithSender,
+  MessagesPageResponse,
+  TempMessage,
+} from "../queries/messages";
 
-/**
- * 发送消息的 Hook
- * 支持乐观更新和错误重试
- */
 export function useSendMessage(chatId: string, currentUserId: string) {
   const queryClient = useQueryClient();
-  const [isSending, setIsSending] = useState(false);
+  const socket = useSocket();
 
   const sendMessage = useCallback(
-    async (content: string, type: string = "text") => {
-      if (!content.trim() || !chatId) return;
+    (content: string, type: "text" | "image" | "file" = "text") => {
+      if (!socket || !content.trim()) return;
 
-      setIsSending(true);
+      const isFriendChat = chatId.startsWith("friend-");
+      const isGroupChat = chatId.startsWith("group-");
 
-      // 解析 chatId: friend-{userId} 或 group-{groupId}
-      const [chatType, targetId] = chatId.split("-");
-
-      // 生成临时 ID
+      // 生成临时消息
       const tempId = `temp-${Date.now()}-${Math.random()}`;
-
-      // 创建临时消息用于乐观更新
-      const tempMessage: MessageWithSender = {
+      const tempMessage: TempMessage = {
         id: tempId,
+        tempId,
         content,
-        senderId: currentUserId,
-        recipientId: chatType === "friend" && targetId ? targetId : null,
-        groupId: chatType === "group" && targetId ? targetId : null,
         type,
+        senderId: currentUserId,
+        recipientId: isFriendChat ? chatId.replace("friend-", "") : null,
+        groupId: isGroupChat ? chatId.replace("group-", "") : null,
         isRead: false,
+        isPending: true,
         createdAt: new Date(),
         sender: {
           id: currentUserId,
-          name: "", // 将由实际数据填充
+          name: "我", // 这里应该从用户状态中获取真实名称
           image: null,
         },
       };
 
-      // 乐观更新：立即添加到缓存
-      addMessageToCache(queryClient, chatId, tempMessage);
-
-      try {
-        // 通过 WebSocket 发送消息
-        const response = await new Promise<{
-          success: boolean;
-          message?: MessageWithSender;
-          error?: string;
-        }>((resolve, reject) => {
-          const timeout = setTimeout(() => {
-            reject(new Error("Send timeout"));
-          }, 10000); // 10秒超时
-
-          socket.emit(
-            "message:send",
-            {
-              tempId,
-              recipientId: chatType === "friend" ? targetId : undefined,
-              groupId: chatType === "group" ? targetId : undefined,
-              content,
-              type,
-            },
-            (response: any) => {
-              clearTimeout(timeout);
-              if (response.error) {
-                reject(new Error(response.error));
-              } else {
-                resolve(response);
-              }
-            }
-          );
-        });
-
-        if (response.success && response.message) {
-          // 替换临时消息为真实消息
-          replaceMessageInCache(queryClient, chatId, tempId, response.message);
-        }
-      } catch (error) {
-        console.error("Failed to send message:", error);
-
-        // 发送失败：标记消息为失败状态
-        // 可以添加重试按钮或移除临时消息
-        queryClient.setQueryData(["messages", chatId], (oldData: any) => {
-          if (!oldData) return oldData;
-
-          const newPages = oldData.pages.map((page: any) => ({
-            ...page,
-            messages: page.messages.map((msg: any) =>
-              msg.id === tempId
-                ? { ...msg, _failed: true, _error: (error as Error).message }
-                : msg
-            ),
-          }));
-
+      // 乐观更新：立即添加临时消息到缓存
+      const queryKey = ["messages", chatId];
+      queryClient.setQueryData<{
+        pages: MessagesPageResponse[];
+        pageParams: unknown[];
+      }>(queryKey, (oldData) => {
+        if (!oldData) {
           return {
-            ...oldData,
-            pages: newPages,
+            pages: [
+              {
+                messages: [tempMessage as MessageWithSender],
+                nextCursor: null,
+                hasMore: false,
+              },
+            ],
+            pageParams: [undefined],
           };
-        });
+        }
 
-        throw error;
-      } finally {
-        setIsSending(false);
-      }
-    },
-    [chatId, currentUserId, queryClient]
-  );
-
-  // 重试发送失败的消息
-  const retryMessage = useCallback(
-    async (failedMessage: MessageWithSender) => {
-      // 移除失败标记
-      queryClient.setQueryData(["messages", chatId], (oldData: any) => {
-        if (!oldData) return oldData;
-
-        const newPages = oldData.pages.map((page: any) => ({
-          ...page,
-          messages: page.messages.filter(
-            (msg: any) => msg.id !== failedMessage.id
-          ),
-        }));
+        const newPages = [...oldData.pages];
+        const firstPage = newPages[0];
+        if (firstPage) {
+          newPages[0] = {
+            messages: [tempMessage as MessageWithSender, ...firstPage.messages],
+            nextCursor: firstPage.nextCursor,
+            hasMore: firstPage.hasMore,
+          };
+        }
 
         return {
           ...oldData,
@@ -130,15 +73,29 @@ export function useSendMessage(chatId: string, currentUserId: string) {
         };
       });
 
-      // 重新发送
-      await sendMessage(failedMessage.content, failedMessage.type);
+      // 发送消息到服务器
+      if (isGroupChat) {
+        socket.emit("group:message", {
+          groupId: chatId.replace("group-", ""),
+          content,
+          type,
+          tempId,
+        });
+      } else {
+        socket.emit("message:send", {
+          recipientId: chatId.replace("friend-", ""),
+          content,
+          type,
+          tempId,
+        });
+      }
+
+      // 监听消息发送确认（可选：用于替换临时消息）
+      // Socket 服务器会通过 'message:new' 事件推送真实消息
+      // ChatMessages 组件会处理消息的去重和替换
     },
-    [chatId, queryClient, sendMessage]
+    [socket, chatId, currentUserId, queryClient]
   );
 
-  return {
-    sendMessage,
-    retryMessage,
-    isSending,
-  };
+  return { sendMessage };
 }
