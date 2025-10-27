@@ -7,7 +7,10 @@ import { randomBytes } from "crypto";
 import { io } from "@/index.ts";
 import { onlineUserService } from "@/services/onlineUsers.ts";
 import { db } from "@workspace/database";
-import { messages as messagesTable, user as userTable } from "@workspace/database/schema";
+import {
+  messages as messagesTable,
+  user as userTable,
+} from "@workspace/database/schema";
 import { eq } from "drizzle-orm";
 
 config({ path: ".env.local" });
@@ -125,6 +128,12 @@ ossRouter.post(
         return res.status(400).json({ error: "缺少chatId参数" });
       }
 
+      // 修复中文文件名乱码问题（multer 的已知问题）
+      const originalname = Buffer.from(
+        req.file.originalname,
+        "latin1"
+      ).toString("utf8");
+
       // 验证文件
       const validation = validateFile(req.file, "image");
       if (!validation.valid) {
@@ -134,12 +143,8 @@ ossRouter.post(
       // 初始化OSS客户端
       const client = initOssClient();
 
-      // 生成文件名
-      const fileName = generateFileName(
-        req.user!.id,
-        req.file.originalname,
-        "image"
-      );
+      // 生成文件名（使用修复后的原始文件名）
+      const fileName = generateFileName(req.user!.id, originalname, "image");
 
       // 上传到OSS
       let url: string;
@@ -180,7 +185,7 @@ ossRouter.post(
         url = `https://${ALI_OSS_BUCKET}.${region}.aliyuncs.com/${fileName}`;
       }
 
-      // 上传成功后，保存消息到数据库
+      // 上传成功后，保存消息到数据库（包含原始文件名）
       const isFriendChat = chatId.startsWith("friend-");
       const isGroupChat = chatId.startsWith("group-");
 
@@ -269,6 +274,12 @@ ossRouter.post(
         return res.status(400).json({ error: "缺少chatId参数" });
       }
 
+      // 修复中文文件名乱码问题（multer 的已知问题）
+      const originalname = Buffer.from(
+        req.file.originalname,
+        "latin1"
+      ).toString("utf8");
+
       // 验证文件
       const validation = validateFile(req.file, "file");
       if (!validation.valid) {
@@ -278,12 +289,8 @@ ossRouter.post(
       // 初始化OSS客户端
       const client = initOssClient();
 
-      // 生成文件名
-      const fileName = generateFileName(
-        req.user!.id,
-        req.file.originalname,
-        "file"
-      );
+      // 生成文件名（使用修复后的原始文件名）
+      const fileName = generateFileName(req.user!.id, originalname, "file");
 
       // 上传到OSS
       let url: string;
@@ -324,9 +331,9 @@ ossRouter.post(
         url = `https://${ALI_OSS_BUCKET}.${region}.aliyuncs.com/${fileName}`;
       }
 
-      // 上传成功后，构造文件元信息并保存消息到数据库
+      // 上传成功后，构造文件元信息并保存消息到数据库（使用修复后的原始文件名）
       const fileInfo = {
-        name: req.file.originalname,
+        name: originalname,
         url,
         size: req.file.size,
         mimeType: req.file.mimetype,
