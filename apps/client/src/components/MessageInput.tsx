@@ -21,6 +21,9 @@ export function MessageInput({
 }: MessageInputProps) {
   const [content, setContent] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [uploadingType, setUploadingType] = useState<"image" | "file" | null>(
+    null
+  );
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [currentFile, setCurrentFile] = useState<File | null>(null);
@@ -63,6 +66,7 @@ export function MessageInput({
   // 处理文件上传
   const handleFileUpload = async (file: File, type: "image" | "file") => {
     setUploading(true);
+    setUploadingType(type);
     setUploadProgress(0);
     setUploadError(null);
     setCurrentFile(file);
@@ -94,6 +98,7 @@ export function MessageInput({
 
       // 重置状态
       setUploading(false);
+      setUploadingType(null);
       setUploadProgress(0);
       setCurrentFile(null);
     } catch (error: any) {
@@ -106,6 +111,7 @@ export function MessageInput({
   // 取消上传
   const handleCancelUpload = () => {
     setUploading(false);
+    setUploadingType(null);
     setUploadProgress(0);
     setUploadError(null);
     setCurrentFile(null);
@@ -190,7 +196,7 @@ export function MessageInput({
             title="发送图片"
             onClick={() => imageInputRef.current?.click()}
           >
-            {uploading ? (
+            {uploading && uploadingType === "image" ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <ImageIcon className="h-4 w-4" />
@@ -213,7 +219,11 @@ export function MessageInput({
             title="发送文件"
             onClick={() => fileInputRef.current?.click()}
           >
-            <Paperclip className="h-4 w-4" />
+            {uploading && uploadingType === "file" ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Paperclip className="h-4 w-4" />
+            )}
           </Button>
         </div>
 
