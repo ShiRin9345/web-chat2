@@ -1,19 +1,22 @@
-import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import axios from "axios";
 import type { Message, User } from "@workspace/database";
 
 const API_BASE = "http://localhost:3001/api";
 
-// 临时消息类型
-export type TempMessage = MessageWithSender & {
-  tempId?: string;
-  isPending?: boolean;
-  isFailed?: boolean;
-};
+// 临时消息类型（与 MessageWithSender 兼容）
+export type TempMessage = MessageWithSender;
 
 // 消息类型（带发送者信息）
 export type MessageWithSender = Message & {
   sender: Pick<User, "id" | "name" | "image">;
+  tempId?: string; // 用于乐观更新的临时ID
+  isPending?: boolean; // 是否正在发送中
+  isFailed?: boolean; // 是否发送失败
 };
 
 // 分页响应类型
@@ -37,9 +40,12 @@ export function useMessages(chatId: string) {
         params.append("cursor", pageParam as string);
       }
 
-      const response = await axios.get(`${API_BASE}/messages?${params.toString()}`, {
-        withCredentials: true,
-      });
+      const response = await axios.get(
+        `${API_BASE}/messages?${params.toString()}`,
+        {
+          withCredentials: true,
+        }
+      );
       return response.data;
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor,

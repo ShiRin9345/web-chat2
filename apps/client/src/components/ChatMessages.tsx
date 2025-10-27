@@ -18,20 +18,12 @@ interface ChatMessagesProps {
   onMessageSend?: (content: string) => void;
 }
 
-export function ChatMessages({
-  chatId,
-  currentUserId,
-}: ChatMessagesProps) {
+export function ChatMessages({ chatId, currentUserId }: ChatMessagesProps) {
   const queryClient = useQueryClient();
   const socket = useSocket();
 
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-  } = useMessages(chatId);
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
+    useMessages(chatId);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -62,7 +54,7 @@ export function ChatMessages({
   const handleScroll = useCallback(() => {
     const atBottom = isAtBottom();
     setShowScrollButton(!atBottom);
-    
+
     if (atBottom) {
       setUnreadCount(0);
     }
@@ -84,14 +76,16 @@ export function ChatMessages({
       // 验证消息是否属于当前聊天
       const isFriendChat = chatId.startsWith("friend-");
       const isGroupChat = chatId.startsWith("group-");
-      
+
       let belongsToCurrentChat = false;
-      
+
       if (isFriendChat) {
         const friendId = chatId.replace("friend-", "");
         belongsToCurrentChat =
-          (message.senderId === friendId && message.recipientId === currentUserId) ||
-          (message.senderId === currentUserId && message.recipientId === friendId);
+          (message.senderId === friendId &&
+            message.recipientId === currentUserId) ||
+          (message.senderId === currentUserId &&
+            message.recipientId === friendId);
       } else if (isGroupChat) {
         const groupId = chatId.replace("group-", "");
         belongsToCurrentChat = message.groupId === groupId;
@@ -99,16 +93,7 @@ export function ChatMessages({
 
       if (!belongsToCurrentChat) return;
 
-      // 检查消息是否已存在（防止重复）
       const queryKey = ["messages", chatId];
-      const existingData = queryClient.getQueryData<{
-        pages: MessagesPageResponse[];
-        pageParams: unknown[];
-      }>(queryKey);
-
-      if (existingData && isMessageInCache(existingData.pages, message.id)) {
-        return;
-      }
 
       // 更新缓存
       queryClient.setQueryData<{
@@ -131,6 +116,35 @@ export function ChatMessages({
         const newPages = [...oldData.pages];
         const firstPage = newPages[0];
         if (firstPage) {
+          // 如果消息包含 tempId，说明这是乐观更新的消息确认，需要替换临时消息
+          if (message.tempId) {
+            const tempIndex = firstPage.messages.findIndex(
+              (m) => m.tempId === message.tempId
+            );
+
+            if (tempIndex !== -1) {
+              // 找到了临时消息，替换它
+              const updatedMessages = [...firstPage.messages];
+              updatedMessages[tempIndex] = message;
+
+              newPages[0] = {
+                ...firstPage,
+                messages: updatedMessages,
+              };
+
+              return {
+                ...oldData,
+                pages: newPages,
+              };
+            }
+          }
+
+          // 检查真实消息是否已存在（防止重复）
+          if (isMessageInCache(oldData.pages, message.id)) {
+            return oldData;
+          }
+
+          // 添加新消息（别人发送的消息）
           newPages[0] = {
             messages: [message, ...firstPage.messages],
             nextCursor: firstPage.nextCursor ?? null,
@@ -196,7 +210,7 @@ export function ChatMessages({
   }
 
   return (
-    <div className="relative flex flex-col h-full">
+    <div className="relative flex flex-col h-full overflow-y-auto">
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
