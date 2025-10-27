@@ -1,9 +1,18 @@
 import { memo } from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "@workspace/ui/components/avatar";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@workspace/ui/components/avatar";
 import { cn } from "@workspace/ui/lib/utils";
 import type { MessageWithSender } from "@/queries/messages";
 import type { TempMessage } from "@/queries/messages";
-import { CheckIcon, CheckCheckIcon, ClockIcon, AlertCircleIcon } from "lucide-react";
+import {
+  CheckIcon,
+  CheckCheckIcon,
+  ClockIcon,
+  AlertCircleIcon,
+} from "lucide-react";
 
 interface MessageItemProps {
   message: MessageWithSender | TempMessage;

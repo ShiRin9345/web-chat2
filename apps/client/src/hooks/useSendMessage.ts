@@ -99,7 +99,14 @@ export function useSendMessage(
       // Socket 服务器会通过 'message:new' 事件推送真实消息
       // ChatMessages 组件会处理消息的去重和替换
     },
-    [socket, chatId, currentUserId, currentUserName, currentUserImage, queryClient]
+    [
+      socket,
+      chatId,
+      currentUserId,
+      currentUserName,
+      currentUserImage,
+      queryClient,
+    ]
   );
 
   return { sendMessage };

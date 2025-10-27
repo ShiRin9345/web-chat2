@@ -5,11 +5,7 @@ import {
   AvatarImage,
 } from "@workspace/ui/components/avatar";
 import { Button } from "@workspace/ui/components/button";
-import {
-  Phone,
-  Video,
-  MoreHorizontal,
-} from "lucide-react";
+import { Phone, Video, MoreHorizontal } from "lucide-react";
 import { useChatInfo } from "@/hooks/useChatInfo";
 import { ChatMessages } from "@/components/ChatMessages";
 import { MessageInput } from "@/components/MessageInput";
