@@ -46,11 +46,17 @@ export function ChatMessages({ chatId, currentUserId }: ChatMessagesProps) {
     return scrollTop + clientHeight >= scrollHeight - threshold;
   }, []);
 
-  // 滚动到底部
+  // 滚动到底部（等待图片加载）
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
-    bottomRef.current?.scrollIntoView({ behavior });
-    // 滚动到底部时清空未读数
-    setUnreadCount(0);
+    // 使用 requestAnimationFrame 确保在下一帧执行
+    requestAnimationFrame(() => {
+      // 再次延迟，确保图片等资源加载完成
+      setTimeout(() => {
+        bottomRef.current?.scrollIntoView({ behavior });
+        // 滚动到底部时清空未读数
+        setUnreadCount(0);
+      }, 100);
+    });
   }, []);
 
   // 处理滚动事件
@@ -194,11 +200,17 @@ export function ChatMessages({ chatId, currentUserId }: ChatMessagesProps) {
       if (!isOptimisticUpdate) {
         const wasAtBottom = isAtBottom();
 
-        if (wasAtBottom) {
-          // 在底部，自动滚动
-          setTimeout(() => scrollToBottom("smooth"), 50);
+        // 如果是自己发送的消息，无论是否在底部都滚动到底部
+        if (isOwnMessage) {
+          // 对于图片消息，需要更长的延迟等待加载
+          const delay = message.type === "image" ? 150 : 50;
+          setTimeout(() => scrollToBottom("smooth"), delay);
+        } else if (wasAtBottom) {
+          // 别人发送的消息，且在底部，自动滚动
+          const delay = message.type === "image" ? 150 : 50;
+          setTimeout(() => scrollToBottom("smooth"), delay);
         } else {
-          // 不在底部，增加未读数
+          // 别人发送的消息，不在底部，增加未读数
           setUnreadCount((prev) => prev + 1);
         }
       }

@@ -46,7 +46,8 @@ function ChatPage() {
   // 文件上传状态和方法，在 MessageInput 和 DropProvider 之间共享
   const uploadState = useFileUpload({
     currentUserId,
-    onSuccess: sendMessage,
+    chatId, // 传递 chatId
+    // onSuccess 不再需要，因为后端会自动保存消息
   });
 
   return (
@@ -128,7 +129,6 @@ function ChatPage() {
             groupName={chatInfo.name}
             groupAvatar={chatInfo.avatar}
             currentUserId={currentUserId}
-            creatorId={chatInfo.creatorId || ""}
           />
         )}
       </div>

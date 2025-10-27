@@ -1,5 +1,6 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { uploadFileToOSS } from "@/utils/ossUpload";
+import { socket } from "@/lib/socket";
 
 export interface UploadState {
   uploading: boolean;
@@ -11,11 +12,13 @@ export interface UploadState {
 
 export interface UseFileUploadOptions {
   currentUserId: string;
-  onSuccess: (content: string, type: "image" | "file") => void;
+  chatId: string;
+  onSuccess?: () => void; // 可选的成功回调
 }
 
 export function useFileUpload({
   currentUserId,
+  chatId,
   onSuccess,
 }: UseFileUploadOptions) {
   const [uploading, setUploading] = useState(false);
@@ -25,6 +28,27 @@ export function useFileUpload({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [currentFile, setCurrentFile] = useState<File | null>(null);
+
+  // 监听后端上传进度 WebSocket 事件
+  useEffect(() => {
+    const handleUploadProgress = (data: {
+      userId: string;
+      fileName: string;
+      progress: number;
+    }) => {
+      // 只更新当前用户的上传进度
+      if (data.userId === currentUserId) {
+        setUploadProgress(data.progress);
+        console.log(`WebSocket 上传进度: ${data.progress}%`);
+      }
+    };
+
+    socket.on("upload:progress", handleUploadProgress);
+
+    return () => {
+      socket.off("upload:progress", handleUploadProgress);
+    };
+  }, [currentUserId]);
 
   // 处理文件上传
   const handleFileUpload = useCallback(
@@ -36,33 +60,21 @@ export function useFileUpload({
       setCurrentFile(file);
 
       try {
-        // 上传文件到OSS
-        const fileUrl = await uploadFileToOSS(
+        // 上传文件到OSS（后端会自动保存消息到数据库）
+        // 注：对于小文件 (≤5MB) 使用本地进度，大文件 (>5MB) 会通过 WebSocket 事件接收进度
+        await uploadFileToOSS(
           file,
           type,
           currentUserId,
+          chatId,
           (progress) => {
+            // 本地上传进度（Axios 的 onUploadProgress）
             setUploadProgress(progress);
           }
         );
 
-        // 上传成功后构造消息内容
-        let content: string;
-        if (type === "image") {
-          content = fileUrl;
-        } else {
-          // 文件消息需要包含元信息
-          const fileInfo = {
-            name: file.name,
-            url: fileUrl,
-            size: file.size,
-            mimeType: file.type,
-          };
-          content = JSON.stringify(fileInfo);
-        }
-
-        // 调用成功回调
-        onSuccess(content, type);
+        // 上传成功，调用成功回调（如果有）
+        onSuccess?.();
 
         // 重置状态
         setUploading(false);
@@ -75,7 +87,7 @@ export function useFileUpload({
         setUploading(false);
       }
     },
-    [currentUserId, onSuccess]
+    [currentUserId, chatId, onSuccess]
   );
 
   // 取消上传

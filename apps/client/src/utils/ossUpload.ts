@@ -61,6 +61,7 @@ export async function uploadFileToOSS(
   file: File,
   fileType: "image" | "file",
   userId: string,
+  chatId: string,
   onProgress?: (progress: number) => void
 ): Promise<string> {
   // 验证文件
@@ -73,6 +74,7 @@ export async function uploadFileToOSS(
     // 创建FormData
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("chatId", chatId); // 添加 chatId 参数
 
     // 选择上传接口
     const uploadUrl = fileType === "image" 
@@ -80,20 +82,24 @@ export async function uploadFileToOSS(
       : `${API_BASE}/oss/upload/file`;
 
     // 上传文件
-    const response = await axios.post<FileInfo>(uploadUrl, formData, {
-      withCredentials: true,
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-      onUploadProgress: (progressEvent) => {
-        if (onProgress && progressEvent.total) {
-          const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          onProgress(progress);
-        }
-      },
-    });
+    const response = await axios.post<FileInfo & { message: any }>(
+      uploadUrl,
+      formData,
+      {
+        withCredentials: true,
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+        onUploadProgress: (progressEvent) => {
+          if (onProgress && progressEvent.total) {
+            const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            onProgress(progress);
+          }
+        },
+      }
+    );
 
-    // 返回文件URL
+    // 返回文件URL（后端已经保存消息到数据库）
     return response.data.url;
   } catch (error: any) {
     console.error("文件上传失败:", error);

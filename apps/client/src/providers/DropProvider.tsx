@@ -1,6 +1,5 @@
 import { createContext, useContext } from "react";
 import { useDropzone } from "react-dropzone";
-import { useSendMessage } from "@/hooks/useSendMessage";
 import type { useFileUpload } from "@/hooks/useFileUpload";
 import { Upload, ImageIcon, FileIcon } from "lucide-react";
 import { cn } from "@workspace/ui/lib/utils";
@@ -32,14 +31,7 @@ export function DropProvider({
   currentUserImage,
   uploadState,
 }: DropProviderProps) {
-  const { sendMessage } = useSendMessage(
-    chatId,
-    currentUserId,
-    currentUserName,
-    currentUserImage
-  );
-
-  // 使用传入的上传状态
+  // 使用传入的上传状态（后端会自动保存消息到数据库）
   const { handleFileUpload } = uploadState;
 
   const onDrop = async (uploadFiles: File[]) => {

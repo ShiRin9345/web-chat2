@@ -146,26 +146,6 @@ function renderMessageContent(
       try {
         const fileInfo = JSON.parse(message.content);
 
-        // 处理文件下载，解决跨域文件名问题
-        const handleDownload = async () => {
-          try {
-            const response = await fetch(fileInfo.url);
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = fileInfo.name;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-          } catch (error) {
-            console.error("文件下载失败:", error);
-            // 降级方案：直接打开链接
-            window.open(fileInfo.url, "_blank");
-          }
-        };
-
         return (
           <div
             className={cn(
@@ -186,12 +166,13 @@ function renderMessageContent(
                 {formatFileSize(fileInfo.size)}
               </p>
             </div>
-            <button
-              onClick={handleDownload}
+            <a
+              href={fileInfo.url}
+              download={fileInfo.name}
               className="text-xs text-primary hover:text-primary/80 font-medium px-3 py-1.5 rounded-md bg-primary/10 hover:bg-primary/20 transition-colors flex-shrink-0"
             >
               下载
-            </button>
+            </a>
           </div>
         );
       } catch {

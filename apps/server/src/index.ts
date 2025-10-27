@@ -18,7 +18,7 @@ const httpServer = createServer(app);
 const PORT = process.env.PORT || 3001;
 
 // Socket.io 配置
-const io = new Server(httpServer, {
+export const io = new Server(httpServer, {
   cors: {
     origin: "http://localhost:3000",
     credentials: true,

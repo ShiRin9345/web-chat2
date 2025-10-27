@@ -81,6 +81,15 @@ function MessagesLayout() {
             unreadCount: 0,
           };
 
+          // 格式化显示内容
+          let displayMessage = message.content;
+          if (message.type === "image") {
+            displayMessage = "[图片]";
+          } else if (message.type === "file") {
+            displayMessage = "[文件]";
+          }
+          newConvInfo.lastMessage = displayMessage;
+
           if (existingIndex >= 0) {
             // 更新已存在的会话，移到最前面
             conversations.splice(existingIndex, 1);
@@ -109,16 +118,31 @@ function MessagesLayout() {
   const conversationsMap = useMemo(() => {
     const map = new Map<
       string,
-      { lastMessage: string; time: string; unreadCount: number }
+      {
+        lastMessage: string;
+        time: string;
+        unreadCount: number;
+        messageType: string;
+      }
     >();
 
     if (conversationsData?.pages?.[0]) {
       for (const conv of conversationsData.pages[0]) {
         const timeAgo = formatTimeAgo(new Date(conv.lastMessageTime));
+
+        // 根据消息类型格式化显示内容
+        let displayMessage = conv.lastMessage;
+        if (conv.lastMessageType === "image") {
+          displayMessage = "[图片]";
+        } else if (conv.lastMessageType === "file") {
+          displayMessage = "[文件]";
+        }
+
         map.set(conv.conversationId, {
-          lastMessage: conv.lastMessage,
+          lastMessage: displayMessage,
           time: timeAgo,
           unreadCount: conv.unreadCount,
+          messageType: conv.lastMessageType,
         });
       }
     }
