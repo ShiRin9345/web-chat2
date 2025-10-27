@@ -42,8 +42,19 @@ export function useFileUpload({
     }) => {
       // 只更新当前用户的上传进度
       if (data.userId === currentUserId) {
-        setUploadProgress(data.progress);
-        console.log(`WebSocket 上传进度: ${data.progress}%`);
+        console.log(`WebSocket 上传进度: ${data.fileName} - ${data.progress}%`);
+
+        // 更新队列中正在上传的文件（找到进度 < 100 的第一个文件）
+        setUploadQueue((prev) =>
+          prev.map((item, index) => {
+            // 找到第一个还在上传中的文件
+            const uploadingIndex = prev.findIndex((i) => i.progress < 100);
+            if (index === uploadingIndex) {
+              return { ...item, progress: data.progress };
+            }
+            return item;
+          })
+        );
       }
     };
 
@@ -62,15 +73,22 @@ export function useFileUpload({
       setUploading(true);
       setUploadingType(type);
 
+      // 判断文件大小，决定是否使用本地进度
+      const MULTIPART_THRESHOLD = 5 * 1024 * 1024; // 5MB
+      const isLargeFile = file.size > MULTIPART_THRESHOLD;
+
       try {
         // 上传文件到OSS（后端会自动保存消息到数据库）
         await uploadFileToOSS(file, type, currentUserId, chatId, (progress) => {
-          // 更新该文件的上传进度
-          setUploadQueue((prev) =>
-            prev.map((item) =>
-              item.file === file ? { ...item, progress } : item
-            )
-          );
+          // 只有小文件才使用 Axios 本地进度
+          // 大文件的进度由 WebSocket 事件更新
+          if (!isLargeFile) {
+            setUploadQueue((prev) =>
+              prev.map((item) =>
+                item.file === file ? { ...item, progress } : item
+              )
+            );
+          }
         });
 
         // 上传成功，从队列中移除
