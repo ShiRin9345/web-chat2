@@ -215,22 +215,16 @@ function ChatPage() {
         </div>
       </div>
 
-      {/* 消息区域 - 使用 VirtualList */}
+      {/* 消息区域 - 使用 VirtualList - ✅ 固定高度测试 */}
       <div className="flex-1 relative">
         <VirtualList
           ref={virtualListRef}
           items={messages.map((msg) => ({ message: { id: msg.id }, ...msg }))}
           renderItem={renderMessage}
-          estimatedItemHeight={80}
+          estimatedItemHeight={100}
           isLoadingMore={isLoadingMore}
           isLast={isLast}
           onLoadMore={handleLoadMore}
-          onScrollDirectionChange={(direction) => {
-            console.log("滚动方向:", direction);
-          }}
-          onVisibleItemsChange={(ids) => {
-            console.log("可见消息ID:", ids);
-          }}
         />
 
         {/* 滚动到底部按钮 */}

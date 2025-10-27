@@ -76,4 +76,7 @@
   backface-visibility: hidden; /* 防止闪烁 */
   perspective: 1000; /* 增强3D效果 */
   z-index: 1; /* 确保内容在提示文字之上 */
+  /* ✅ 额外的平滑滚动优化 */
+  contain: layout style paint; /* 限制重排范围 */
+  transform-style: preserve-3d; /* 保持3D变换 */
 }

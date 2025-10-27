@@ -7,7 +7,6 @@ import React, {
   useImperativeHandle,
   forwardRef,
 } from "react";
-import { useDebounce } from "use-debounce";
 import "./VirtualList.css";
 
 // 常量定义
@@ -99,16 +98,27 @@ function VirtualListInner<T extends { message?: { id?: string | number } }>(
   const accumulatedHeightsRef = useRef<number[]>([]);
   const previousVisibleIdsRef = useRef<Set<string>>(new Set());
   const isScrollingRef = useRef(false);
+  const lastOffsetRef = useRef(0);
+  const pendingOffsetRef = useRef<number | null>(null);
+  const transformRafRef = useRef<number | null>(null);
+  const isTransformTickingRef = useRef(false);
 
-  // 防抖的滚动事件处理
-  const [debouncedScrollEvent] = useDebounce(
-    useCallback(
-      (event: React.UIEvent) => {
-        onScroll?.(event);
-      },
-      [onScroll]
-    ),
-    16
+  // 优化的滚动事件处理 - 使用 RAF 节流
+  const scrollRafRef = useRef<number | null>(null);
+  const isScrollTickingRef = useRef(false);
+
+  const handleScrollOptimized = useCallback(
+    (event: React.UIEvent) => {
+      if (!isScrollTickingRef.current) {
+        scrollRafRef.current = requestAnimationFrame(() => {
+          onScroll?.(event);
+          isScrollTickingRef.current = false;
+          scrollRafRef.current = null;
+        });
+        isScrollTickingRef.current = true;
+      }
+    },
+    [onScroll]
   );
 
   // 直接更新phantom元素高度
@@ -118,11 +128,33 @@ function VirtualListInner<T extends { message?: { id?: string | number } }>(
     }
   }, []);
 
-  // 直接更新content元素偏移
+  // 平滑的 transform 更新策略 - 参考 TanStack Virtual
   const updateContentOffset = useCallback((offsetValue: number) => {
-    if (contentRef.current) {
-      contentRef.current.style.transform = `translateY(${offsetValue}px)`;
+    // 只有偏移量变化超过阈值才更新，避免微小抖动
+    if (Math.abs(lastOffsetRef.current - offsetValue) < 0.5) {
+      return;
     }
+
+    pendingOffsetRef.current = offsetValue;
+
+    // 如果已经在 RAF 中，直接返回，避免重复调度
+    if (isTransformTickingRef.current) {
+      return;
+    }
+
+    isTransformTickingRef.current = true;
+
+    // 使用 RAF 确保与浏览器渲染周期同步
+    transformRafRef.current = requestAnimationFrame(() => {
+      if (contentRef.current && pendingOffsetRef.current !== null) {
+        // 使用 transform3d 启用硬件加速
+        contentRef.current.style.transform = `translate3d(0, ${pendingOffsetRef.current}px, 0)`;
+        lastOffsetRef.current = pendingOffsetRef.current;
+        pendingOffsetRef.current = null;
+      }
+      isTransformTickingRef.current = false;
+      transformRafRef.current = null;
+    });
   }, []);
 
   // 取消底部锁定
@@ -369,8 +401,9 @@ function VirtualListInner<T extends { message?: { id?: string | number } }>(
       (isLoadingMore && !isLast ? LOADING_OFFSET : 0) +
       topOffset;
 
-    // ✅ 避免微小抖动:只有变化超过1px才更新
-    if (Math.abs(offsetRef.current - newOffset) > 1) {
+    // ✅ 平滑更新：只有变化超过阈值才更新
+    const offsetDelta = Math.abs(offsetRef.current - newOffset);
+    if (offsetDelta > 0.5) {
       offsetRef.current = newOffset;
       updateContentOffset(newOffset);
     }
@@ -520,10 +553,10 @@ function VirtualListInner<T extends { message?: { id?: string | number } }>(
     onVisibleItemsChange?.(visibleIds);
   }, [visibleData, onVisibleItemsChange]);
 
-  // 滚动事件处理
+  // 优化的滚动事件处理
   const handleScroll = useCallback(
     (event: React.UIEvent) => {
-      debouncedScrollEvent(event);
+      handleScrollOptimized(event);
       emitVisibleItems();
 
       if (!isScrollingRef.current) {
@@ -534,7 +567,7 @@ function VirtualListInner<T extends { message?: { id?: string | number } }>(
         }
       }
     },
-    [debouncedScrollEvent, emitVisibleItems, updateFrame]
+    [handleScrollOptimized, emitVisibleItems, updateFrame]
   );
 
   // 监听列表数据变化
@@ -596,6 +629,16 @@ function VirtualListInner<T extends { message?: { id?: string | number } }>(
       if (bottomLockRafIdRef.current !== null) {
         cancelAnimationFrame(bottomLockRafIdRef.current);
         bottomLockRafIdRef.current = null;
+      }
+
+      if (transformRafRef.current !== null) {
+        cancelAnimationFrame(transformRafRef.current);
+        transformRafRef.current = null;
+      }
+
+      if (scrollRafRef.current !== null) {
+        cancelAnimationFrame(scrollRafRef.current);
+        scrollRafRef.current = null;
       }
 
       if (resizeObserverRef.current) {
