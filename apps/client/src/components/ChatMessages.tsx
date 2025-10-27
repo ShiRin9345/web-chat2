@@ -64,11 +64,15 @@ export function ChatMessages({ chatId, currentUserId }: ChatMessagesProps) {
   // 初次加载后滚动到底部
   useEffect(() => {
     if (!isLoading && messages.length > 0 && isInitialLoadRef.current) {
-      scrollToBottom("auto");
+      // 直接设置 scrollTop 到最大值
+      const container = scrollContainerRef.current;
+      if (container) {
+        container.scrollTop = container.scrollHeight;
+      }
       isInitialLoadRef.current = false;
       previousMessageCountRef.current = messages.length;
     }
-  }, [isLoading, messages.length, scrollToBottom]);
+  }, [isLoading, messages.length]);
 
   // 监听消息数量变化（用于发送消息后立即滚动）
   useEffect(() => {
@@ -78,13 +82,15 @@ export function ChatMessages({ chatId, currentUserId }: ChatMessagesProps) {
     // 如果消息数量增加，且当前在底部，则滚动到底部
     if (messages.length > previousMessageCountRef.current) {
       const wasAtBottom = isAtBottom();
-      
+
       if (wasAtBottom) {
         // 等待 DOM 更新后滚动
         setTimeout(() => scrollToBottom("smooth"), 50);
       } else {
         // 如果不在底部，增加未读计数
-        setUnreadCount((prev) => prev + (messages.length - previousMessageCountRef.current));
+        setUnreadCount(
+          (prev) => prev + (messages.length - previousMessageCountRef.current)
+        );
       }
     }
 

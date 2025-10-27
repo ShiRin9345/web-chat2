@@ -33,7 +33,7 @@ export function useMessages(chatId: string) {
     queryFn: async ({ pageParam }) => {
       const params = new URLSearchParams({
         chatId,
-        limit: "50",
+        limit: "20",
       });
 
       if (pageParam) {
