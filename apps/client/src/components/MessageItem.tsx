@@ -4,6 +4,7 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@workspace/ui/components/avatar";
+import { ImageZoom } from "@workspace/ui/components/image-zoom";
 import { cn } from "@workspace/ui/lib/utils";
 import type { MessageWithSender } from "@/queries/messages";
 import type { TempMessage } from "@/queries/messages";
@@ -116,18 +117,16 @@ function renderMessageContent(
     case "image":
       return (
         <div className="max-w-xs">
-          <img
-            src={message.content}
-            alt="图片消息"
-            className={cn(
-              "rounded-xl cursor-pointer hover:opacity-90 transition-opacity shadow-md max-h-80 object-cover",
-              isOwnMessage ? "rounded-tr-sm" : "rounded-tl-sm"
-            )}
-            onClick={() => {
-              // TODO: 实现图片预览功能
-              window.open(message.content, "_blank");
-            }}
-          />
+          <ImageZoom>
+            <img
+              src={message.content}
+              alt="图片消息"
+              className={cn(
+                "rounded-xl shadow-md max-h-80 object-cover w-full",
+                isOwnMessage ? "rounded-tr-sm" : "rounded-tl-sm"
+              )}
+            />
+          </ImageZoom>
         </div>
       );
 
@@ -135,14 +134,14 @@ function renderMessageContent(
       // 简单的文件显示（可以后续增强）
       try {
         const fileInfo = JSON.parse(message.content);
-        
+
         // 处理文件下载，解决跨域文件名问题
         const handleDownload = async () => {
           try {
             const response = await fetch(fileInfo.url);
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
+            const a = document.createElement("a");
             a.href = url;
             a.download = fileInfo.name;
             document.body.appendChild(a);
@@ -150,12 +149,12 @@ function renderMessageContent(
             document.body.removeChild(a);
             window.URL.revokeObjectURL(url);
           } catch (error) {
-            console.error('文件下载失败:', error);
+            console.error("文件下载失败:", error);
             // 降级方案：直接打开链接
-            window.open(fileInfo.url, '_blank');
+            window.open(fileInfo.url, "_blank");
           }
         };
-        
+
         return (
           <div
             className={cn(
