@@ -31,7 +31,14 @@ function ChatPage() {
   });
   const { data: session } = authClient.useSession();
   const currentUserId = session?.user?.id || "";
-  const { sendMessage } = useSendMessage(chatId, currentUserId);
+  const currentUserName = session?.user?.name || "我";
+  const currentUserImage = session?.user?.image || null;
+  const { sendMessage } = useSendMessage(
+    chatId,
+    currentUserId,
+    currentUserName,
+    currentUserImage
+  );
 
   return (
     <div className="h-full flex flex-col">

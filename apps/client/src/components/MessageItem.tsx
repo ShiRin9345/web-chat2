@@ -24,15 +24,13 @@ export const MessageItem = memo(function MessageItem({
         isOwnMessage ? "flex-row-reverse" : "flex-row"
       )}
     >
-      {/* 头像 - 只有对方消息显示 */}
-      {!isOwnMessage && (
-        <Avatar className="w-8 h-8">
-          <AvatarImage src={message.sender.image || undefined} />
-          <AvatarFallback>
-            {message.sender.name?.[0]?.toUpperCase() || "U"}
-          </AvatarFallback>
-        </Avatar>
-      )}
+      {/* 头像 - 双方都显示 */}
+      <Avatar className="w-8 h-8">
+        <AvatarImage src={message.sender.image || undefined} />
+        <AvatarFallback>
+          {message.sender.name?.[0]?.toUpperCase() || "U"}
+        </AvatarFallback>
+      </Avatar>
 
       {/* 消息内容 */}
       <div

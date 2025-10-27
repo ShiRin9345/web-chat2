@@ -7,7 +7,12 @@ import type {
   TempMessage,
 } from "../queries/messages";
 
-export function useSendMessage(chatId: string, currentUserId: string) {
+export function useSendMessage(
+  chatId: string,
+  currentUserId: string,
+  currentUserName: string,
+  currentUserImage: string | null
+) {
   const queryClient = useQueryClient();
   const socket = useSocket();
 
@@ -33,8 +38,8 @@ export function useSendMessage(chatId: string, currentUserId: string) {
         createdAt: new Date(),
         sender: {
           id: currentUserId,
-          name: "我", // 这里应该从用户状态中获取真实名称
-          image: null,
+          name: currentUserName,
+          image: currentUserImage,
         },
       };
 
@@ -94,7 +99,7 @@ export function useSendMessage(chatId: string, currentUserId: string) {
       // Socket 服务器会通过 'message:new' 事件推送真实消息
       // ChatMessages 组件会处理消息的去重和替换
     },
-    [socket, chatId, currentUserId, queryClient]
+    [socket, chatId, currentUserId, currentUserName, currentUserImage, queryClient]
   );
 
   return { sendMessage };
