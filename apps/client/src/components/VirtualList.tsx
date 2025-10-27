@@ -11,13 +11,13 @@ import { useDebounce } from "use-debounce";
 import "./VirtualList.css";
 
 // 常量定义
-const DEFAULT_ESTIMATED_HEIGHT = 80; // 默认预估的每项高度
-const BUFFER_SIZE = 5; // 上下缓冲区域的数量
-const OVERSCAN_SIZE = 1000; // 预渲染区域的像素高度，防止滚动时出现空白
-const MAX_CACHE_SIZE = 100; // 高度缓存的最大数量
-const LOADING_OFFSET = 26; // 加载中需要的偏移量(26px是加载动画的高度)
-const SCROLL_THRESHOLD = 26; // 滚动到顶部的阈值，用于触发加载更多
-const DOM_CLEANUP_INTERVAL = 60000; // DOM清理间隔，默认1分钟
+const DEFAULT_ESTIMATED_HEIGHT = 80;
+const BUFFER_SIZE = 5;
+const OVERSCAN_SIZE = 1000;
+const MAX_CACHE_SIZE = 100;
+const LOADING_OFFSET = 26;
+const SCROLL_THRESHOLD = 26;
+const DOM_CLEANUP_INTERVAL = 60000;
 
 // 类型定义
 export interface VirtualListProps<T> {
@@ -79,20 +79,15 @@ function VirtualListInner<T extends { message?: { id?: string | number } }>(
   const phantomRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // 响应式状态
+  // 响应式状态 - 只保留必要的状态
   const [heights, setHeights] = useState<Map<string, number>>(new Map());
   const [visibleRange, setVisibleRange] = useState<VisibleRange>({
     start: 0,
     end: 0,
   });
-  const [isScrolling, setIsScrolling] = useState(false);
-  const [accumulatedHeights, setAccumulatedHeights] = useState<number[]>([]);
   const [hideScrollbar, setHideScrollbar] = useState(true);
-  const [previousVisibleIds, setPreviousVisibleIds] = useState<Set<string>>(
-    new Set()
-  );
 
-  // 非响应式变量
+  // 非响应式变量 - 参考Vue版本,使用ref存储频繁变化的值
   const offsetRef = useRef(0);
   const rafIdRef = useRef<number | null>(null);
   const lastScrollTopRef = useRef(0);
@@ -101,6 +96,9 @@ function VirtualListInner<T extends { message?: { id?: string | number } }>(
   const cleanupTimerIdRef = useRef<number | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const bottomLockRafIdRef = useRef<number | null>(null);
+  const accumulatedHeightsRef = useRef<number[]>([]);
+  const previousVisibleIdsRef = useRef<Set<string>>(new Set());
+  const isScrollingRef = useRef(false);
 
   // 防抖的滚动事件处理
   const [debouncedScrollEvent] = useDebounce(
@@ -113,14 +111,14 @@ function VirtualListInner<T extends { message?: { id?: string | number } }>(
     16
   );
 
-  // 直接更新phantom元素高度的函数
+  // 直接更新phantom元素高度
   const updatePhantomHeight = useCallback((height: number) => {
     if (phantomRef.current) {
       phantomRef.current.style.height = `${height}px`;
     }
   }, []);
 
-  // 直接更新content元素偏移的函数
+  // 直接更新content元素偏移
   const updateContentOffset = useCallback((offsetValue: number) => {
     if (contentRef.current) {
       contentRef.current.style.transform = `translateY(${offsetValue}px)`;
@@ -135,7 +133,7 @@ function VirtualListInner<T extends { message?: { id?: string | number } }>(
     }
   }, []);
 
-  // 启动底部锁定，直到高度与位置稳定
+  // 启动底部锁定
   const lockBottomUntilStable = useCallback(
     (timeoutMs = 450, stableFrames = 3) => {
       const container = containerRef.current;
@@ -160,13 +158,11 @@ function VirtualListInner<T extends { message?: { id?: string | number } }>(
           return;
         }
 
-        // 强制吸底
         const target = Math.max(0, el.scrollHeight - el.clientHeight);
         if (el.scrollTop !== target) {
           el.scrollTop = target;
         }
 
-        // 判断高度与位置是否稳定
         const currentHeight = el.scrollHeight;
         const heightDelta = Math.abs(currentHeight - lastHeight);
         const distanceFromBottom =
@@ -206,52 +202,46 @@ function VirtualListInner<T extends { message?: { id?: string | number } }>(
 
   // 清理过期的高度缓存
   const cleanupHeightCache = useCallback(() => {
-    setHeights((prevHeights) => {
-      if (prevHeights.size > MAX_CACHE_SIZE) {
-        const keys = Array.from(prevHeights.keys());
-        const visibleKeys = new Set(
-          items
-            .slice(
-              Math.max(0, visibleRange.start - buffer),
-              visibleRange.end + buffer + 1
-            )
-            .map((item) => item.message?.id?.toString())
-            .filter(Boolean)
-        );
+    if (heights.size > MAX_CACHE_SIZE) {
+      const keys = Array.from(heights.keys());
+      const visibleKeys = new Set(
+        items
+          .slice(
+            Math.max(0, visibleRange.start - buffer),
+            visibleRange.end + buffer + 1
+          )
+          .map((item) => item.message?.id?.toString())
+          .filter(Boolean)
+      );
 
-        const keysToDelete = keys.filter((key) => !visibleKeys.has(key));
-        const deleteCount = keysToDelete.length - MAX_CACHE_SIZE / 2;
+      const keysToDelete = keys.filter((key) => !visibleKeys.has(key));
+      const deleteCount = keysToDelete.length - MAX_CACHE_SIZE / 2;
 
-        if (deleteCount > 0) {
-          const newHeights = new Map(prevHeights);
+      if (deleteCount > 0) {
+        setHeights((prev) => {
+          const newHeights = new Map(prev);
           for (const key of keysToDelete.slice(0, deleteCount)) {
             newHeights.delete(key);
           }
           needsHeightRecalculationRef.current = true;
           return newHeights;
-        }
+        });
       }
-      return prevHeights;
-    });
-  }, [items, visibleRange, buffer]);
+    }
+  }, [heights, items, visibleRange, buffer]);
 
   // 更新累积高度缓存
   const updateAccumulatedHeights = useCallback(() => {
-    setAccumulatedHeights((_prevAccumulated) => {
-      const newAccumulated: number[] = [];
-      let totalHeight = 0;
+    accumulatedHeightsRef.current = [];
+    let totalHeight = 0;
 
-      items.forEach((item) => {
-        const height =
-          heights.get(item.message?.id?.toString() || "") ||
-          estimatedItemHeight;
-        totalHeight += height;
-        newAccumulated.push(totalHeight);
-      });
-
-      return newAccumulated;
+    items.forEach((item) => {
+      const height =
+        heights.get(item.message?.id?.toString() || "") || estimatedItemHeight;
+      totalHeight += height;
+      accumulatedHeightsRef.current.push(totalHeight);
     });
-  }, [items, estimatedItemHeight]);
+  }, [items, heights, estimatedItemHeight]);
 
   // 计算可见项目
   const visibleData = useMemo((): VirtualItem<T>[] => {
@@ -265,11 +255,18 @@ function VirtualListInner<T extends { message?: { id?: string | number } }>(
 
   // 计算列表总高度
   const totalHeight = useMemo(() => {
+    if (needsHeightRecalculationRef.current) {
+      updateAccumulatedHeights();
+      needsHeightRecalculationRef.current = false;
+    }
+
     if (
-      accumulatedHeights.length > 0 &&
-      accumulatedHeights.length === items.length
+      accumulatedHeightsRef.current.length > 0 &&
+      accumulatedHeightsRef.current.length === items.length
     ) {
-      return accumulatedHeights[accumulatedHeights.length - 1];
+      return accumulatedHeightsRef.current[
+        accumulatedHeightsRef.current.length - 1
+      ];
     }
 
     return items.reduce((total, item) => {
@@ -278,18 +275,24 @@ function VirtualListInner<T extends { message?: { id?: string | number } }>(
         (heights.get(item.message?.id?.toString() || "") || estimatedItemHeight)
       );
     }, 0);
-  }, [items, heights, estimatedItemHeight, accumulatedHeights]);
+  }, [items, heights, estimatedItemHeight, updateAccumulatedHeights]);
 
   // 根据滚动位置计算起始索引
   const getStartIndex = useCallback(
     (scrollTop: number) => {
+      // ✅ 确保累积高度已更新
+      if (needsHeightRecalculationRef.current) {
+        updateAccumulatedHeights();
+        needsHeightRecalculationRef.current = false;
+      }
+
       let left = 0;
-      let right = accumulatedHeights.length - 1;
+      let right = accumulatedHeightsRef.current.length - 1;
       const target = scrollTop - OVERSCAN_SIZE;
 
       while (left <= right) {
         const mid = Math.floor((left + right) / 2);
-        if ((accumulatedHeights[mid] ?? 0) < target) {
+        if ((accumulatedHeightsRef.current[mid] ?? 0) < target) {
           left = mid + 1;
         } else {
           right = mid - 1;
@@ -298,14 +301,20 @@ function VirtualListInner<T extends { message?: { id?: string | number } }>(
 
       return Math.max(0, left - buffer);
     },
-    [accumulatedHeights, buffer]
+    [buffer, updateAccumulatedHeights]
   );
 
   // 计算指定索引的偏移量
   const getOffsetForIndex = useCallback(
     (index: number) => {
-      if (index > 0 && index < accumulatedHeights.length) {
-        return accumulatedHeights[index - 1] || 0;
+      // ✅ 确保累积高度已更新
+      if (needsHeightRecalculationRef.current) {
+        updateAccumulatedHeights();
+        needsHeightRecalculationRef.current = false;
+      }
+
+      if (index > 0 && index < accumulatedHeightsRef.current.length) {
+        return accumulatedHeightsRef.current[index - 1] || 0;
       }
 
       let total = 0;
@@ -320,7 +329,7 @@ function VirtualListInner<T extends { message?: { id?: string | number } }>(
       }
       return total;
     },
-    [accumulatedHeights, heights, items, estimatedItemHeight]
+    [heights, items, estimatedItemHeight, updateAccumulatedHeights]
   );
 
   // 更新可见范围
@@ -337,7 +346,6 @@ function VirtualListInner<T extends { message?: { id?: string | number } }>(
     while (total < clientHeight + OVERSCAN_SIZE * 2 && end < items.length) {
       const item = items[end];
       if (item) {
-        // 使用 getOffsetForIndex 来计算高度，避免直接依赖 heights
         const itemHeight = getOffsetForIndex(end + 1) - getOffsetForIndex(end);
         total += itemHeight;
       }
@@ -346,7 +354,13 @@ function VirtualListInner<T extends { message?: { id?: string | number } }>(
 
     end = Math.min(items.length - 1, end + buffer);
 
-    setVisibleRange({ start, end });
+    // ✅ 只有当范围真正变化时才更新
+    setVisibleRange((prev) => {
+      if (prev.start === start && prev.end === end) {
+        return prev;
+      }
+      return { start, end };
+    });
 
     const topOffset =
       (!isLoadingMore && isLast) || (isLoadingMore && !isLast) ? 32 : 0;
@@ -354,71 +368,55 @@ function VirtualListInner<T extends { message?: { id?: string | number } }>(
       getOffsetForIndex(start) +
       (isLoadingMore && !isLast ? LOADING_OFFSET : 0) +
       topOffset;
-    offsetRef.current = newOffset;
-    updateContentOffset(newOffset);
+
+    // ✅ 避免微小抖动:只有变化超过1px才更新
+    if (Math.abs(offsetRef.current - newOffset) > 1) {
+      offsetRef.current = newOffset;
+      updateContentOffset(newOffset);
+    }
   }, [
     getStartIndex,
     getOffsetForIndex,
-    items,
+    items.length,
     buffer,
     isLoadingMore,
     isLast,
     updateContentOffset,
   ]);
 
-  // 监听列表数据变化
-  useEffect(() => {
-    if (items.length === 0) {
-      setHeights(new Map());
-      setAccumulatedHeights([]);
-      setPreviousVisibleIds(new Set());
+  // 更新项目实际高度
+  const updateItemHeight = useCallback(() => {
+    if (!containerRef.current) return;
+
+    let hasUpdate = false;
+    const newHeights = new Map(heights);
+
+    for (const item of visibleData) {
+      const id = item.message?.id?.toString();
+      if (!id) continue;
+
+      const el = document.getElementById(`item-${id}`);
+      if (el) {
+        const height = el.getBoundingClientRect().height;
+        const oldHeight = newHeights.get(id);
+
+        if (oldHeight !== height) {
+          newHeights.set(id, height);
+          hasUpdate = true;
+        }
+      }
     }
 
-    needsHeightRecalculationRef.current = true;
-  }, [items.length, listKey]); // 只依赖长度
-
-  // 监听高度变化，重新计算累积高度
-  useEffect(() => {
-    if (needsHeightRecalculationRef.current) {
-      updateAccumulatedHeights();
-      needsHeightRecalculationRef.current = false;
+    if (hasUpdate) {
+      setHeights(newHeights);
+      needsHeightRecalculationRef.current = true;
     }
-  }, [heights.size, items.length, estimatedItemHeight]); // 使用 size 而不是整个 Map
 
-  // 监听高度变化，更新可见范围（延迟执行避免循环）
-  useEffect(() => {
-    if (!isScrolling && needsHeightRecalculationRef.current === false) {
-      const timer = setTimeout(() => {
-        updateVisibleRange();
-      }, 16); // 增加延迟到16ms
-      return () => clearTimeout(timer);
-    }
-  }, [isScrolling, accumulatedHeights.length]); // 只依赖长度
+    cleanupHeightCache();
 
-  // 单独的 effect 处理数据变化后的更新
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      updateVisibleRange();
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [items.length]); // 当数据长度变化时更新
-
-  // 监听可见数据变化，更新可见项目ID集合
-  useEffect(() => {
-    const currentVisibleIds = new Set(
-      visibleData
-        .map((item) => item.message?.id?.toString())
-        .filter((id): id is string => Boolean(id))
-    );
-    setPreviousVisibleIds(currentVisibleIds);
-  }, [visibleData]);
-
-  // 监听totalHeight变化，直接更新phantom元素高度
-  useEffect(() => {
-    if (totalHeight !== undefined) {
-      updatePhantomHeight(totalHeight);
-    }
-  }, [totalHeight, updatePhantomHeight]);
+    // ✅ 移除自动更新可见范围,避免闪烁
+    // 让滚动事件或数据变化自然触发更新
+  }, [visibleData, heights, cleanupHeightCache]);
 
   // 清理不可见的DOM节点
   const cleanupInvisibleDOMNodes = useCallback(() => {
@@ -430,11 +428,11 @@ function VirtualListInner<T extends { message?: { id?: string | number } }>(
         .filter((id): id is string => Boolean(id))
     );
 
-    const invisibleIds = Array.from(previousVisibleIds).filter(
+    const invisibleIds = Array.from(previousVisibleIdsRef.current).filter(
       (id) => !currentVisibleIds.has(id)
     );
 
-    setPreviousVisibleIds(new Set(currentVisibleIds));
+    previousVisibleIdsRef.current = currentVisibleIds;
 
     if (invisibleIds.length === 0) return;
 
@@ -456,10 +454,10 @@ function VirtualListInner<T extends { message?: { id?: string | number } }>(
       try {
         (window as any).gc();
       } catch (e) {
-        // 忽略错误，gc可能不可用
+        // 忽略错误
       }
     }
-  }, [visibleData, previousVisibleIds]);
+  }, [visibleData]);
 
   // 定时清理DOM节点
   const startDOMCleanupTimer = useCallback(() => {
@@ -471,35 +469,6 @@ function VirtualListInner<T extends { message?: { id?: string | number } }>(
       cleanupInvisibleDOMNodes();
     }, DOM_CLEANUP_INTERVAL);
   }, [cleanupInvisibleDOMNodes]);
-
-  // 更新项目实际高度
-  const updateItemHeight = useCallback(() => {
-    if (!containerRef.current) return;
-
-    for (const item of visibleData) {
-      const id = item.message?.id?.toString();
-      if (!id) continue;
-
-      const el = document.getElementById(`item-${id}`);
-      if (el) {
-        const height = el.getBoundingClientRect().height;
-
-        // 使用 setHeights 的回调形式来获取当前值，避免依赖 heights
-        setHeights((prevHeights) => {
-          const oldHeight = prevHeights.get(id);
-          if (oldHeight !== height) {
-            const newHeights = new Map(prevHeights);
-            newHeights.set(id, height);
-            needsHeightRecalculationRef.current = true;
-            return newHeights;
-          }
-          return prevHeights;
-        });
-      }
-    }
-
-    cleanupHeightCache();
-  }, [visibleData, cleanupHeightCache]);
 
   // 更新可见范围的帧动画处理
   const updateFrame = useCallback(() => {
@@ -524,7 +493,7 @@ function VirtualListInner<T extends { message?: { id?: string | number } }>(
       consecutiveStaticFramesRef.current++;
 
       if (consecutiveStaticFramesRef.current >= 3) {
-        setIsScrolling(false);
+        isScrollingRef.current = false;
         updateItemHeight();
         if (rafIdRef.current !== null) {
           cancelAnimationFrame(rafIdRef.current);
@@ -557,104 +526,59 @@ function VirtualListInner<T extends { message?: { id?: string | number } }>(
       debouncedScrollEvent(event);
       emitVisibleItems();
 
-      if (!isScrolling) {
-        setIsScrolling(true);
+      if (!isScrollingRef.current) {
+        isScrollingRef.current = true;
         consecutiveStaticFramesRef.current = 0;
         if (rafIdRef.current === null) {
           rafIdRef.current = requestAnimationFrame(updateFrame);
         }
       }
     },
-    [debouncedScrollEvent, emitVisibleItems, isScrolling, updateFrame]
+    [debouncedScrollEvent, emitVisibleItems, updateFrame]
   );
 
-  // 暴露方法
-  useImperativeHandle(
-    ref,
-    () => ({
-      scrollTo: (options: {
-        index?: number;
-        position?: "top" | "bottom";
-        behavior?: ScrollBehavior;
-      }) => {
-        if (!containerRef.current) return;
+  // 监听列表数据变化
+  useEffect(() => {
+    if (items.length === 0) {
+      setHeights(new Map());
+      accumulatedHeightsRef.current = [];
+      previousVisibleIdsRef.current.clear();
+    }
 
-        const executeScroll = () => {
-          if (!containerRef.current) return;
+    needsHeightRecalculationRef.current = true;
+    updateVisibleRange();
 
-          if (options.position === "bottom") {
-            setTimeout(() => {
-              updateItemHeight();
-              setTimeout(() => {
-                if (containerRef.current) {
-                  const scrollHeight = containerRef.current.scrollHeight;
-                  const clientHeight = containerRef.current.clientHeight;
-                  const targetScrollTop = Math.max(
-                    0,
-                    scrollHeight - clientHeight
-                  );
-
-                  containerRef.current.scrollTo({
-                    top: targetScrollTop,
-                    behavior: options.behavior || "auto",
-                  });
-
-                  lockBottomUntilStable();
-                }
-              }, 0);
-            }, 0);
-          } else if (options.position === "top") {
-            containerRef.current.scrollTo({
-              top: 0,
-              behavior: options.behavior || "auto",
-            });
-          } else if (typeof options.index === "number") {
-            const offset = getOffsetForIndex(options.index ?? 0);
-            containerRef.current.scrollTo({
-              top: offset,
-              behavior: options.behavior || "auto",
-            });
-          }
-        };
-
-        executeScroll();
-        if (options.behavior === "smooth") {
-          setTimeout(executeScroll, 100);
-        }
-      },
-      getContainer: () => containerRef.current,
-    }),
-    [updateItemHeight, lockBottomUntilStable, getOffsetForIndex]
-  );
-
-  // ResizeObserver 回调函数
-  const debouncedResize = useCallback(() => {
-    // 延迟执行避免循环依赖
-    setTimeout(() => {
-      updateVisibleRange();
-      setTimeout(() => {
-        updateItemHeight();
-      }, 0);
+    // 延迟更新高度
+    const timer = setTimeout(() => {
+      updateItemHeight();
     }, 0);
-  }, [updateVisibleRange, updateItemHeight]);
+
+    return () => clearTimeout(timer);
+  }, [items.length, listKey]);
+
+  // 监听totalHeight变化
+  useEffect(() => {
+    if (typeof totalHeight === "number") {
+      updatePhantomHeight(totalHeight);
+    }
+  }, [totalHeight, updatePhantomHeight]);
 
   // 生命周期管理
   useEffect(() => {
     // 初始化
-    const initTimer = setTimeout(() => {
-      updateVisibleRange();
+    updateVisibleRange();
 
-      setTimeout(() => {
-        if (totalHeight !== undefined) {
-          updatePhantomHeight(totalHeight);
-        }
-        updateContentOffset(offsetRef.current);
-      }, 0);
+    const initTimer = setTimeout(() => {
+      if (totalHeight !== undefined) {
+        updatePhantomHeight(totalHeight);
+      }
+      updateContentOffset(offsetRef.current);
     }, 0);
 
     if (containerRef.current) {
       resizeObserverRef.current = new ResizeObserver(() => {
-        debouncedResize();
+        updateVisibleRange();
+        setTimeout(() => updateItemHeight(), 0);
       });
       resizeObserverRef.current.observe(containerRef.current);
     }
@@ -685,11 +609,82 @@ function VirtualListInner<T extends { message?: { id?: string | number } }>(
       }
 
       setHeights(new Map());
-      setAccumulatedHeights([]);
-      setPreviousVisibleIds(new Set());
+      accumulatedHeightsRef.current = [];
+      previousVisibleIdsRef.current.clear();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // 只在挂载时执行一次
+  }, []);
+
+  // 暴露方法
+  useImperativeHandle(
+    ref,
+    () => ({
+      scrollTo: (options: {
+        index?: number;
+        position?: "top" | "bottom";
+        behavior?: ScrollBehavior;
+      }) => {
+        if (!containerRef.current) return;
+
+        const executeScroll = () => {
+          if (!containerRef.current) return;
+
+          if (options.position === "bottom") {
+            setTimeout(() => {
+              updateItemHeight();
+              if (needsHeightRecalculationRef.current) {
+                updateAccumulatedHeights();
+                needsHeightRecalculationRef.current = false;
+              }
+              setTimeout(() => {
+                if (containerRef.current) {
+                  const scrollHeight = containerRef.current.scrollHeight;
+                  const clientHeight = containerRef.current.clientHeight;
+                  const targetScrollTop = Math.max(
+                    0,
+                    scrollHeight - clientHeight
+                  );
+
+                  containerRef.current.scrollTo({
+                    top: targetScrollTop,
+                    behavior: options.behavior || "auto",
+                  });
+
+                  lockBottomUntilStable();
+                }
+              }, 0);
+            }, 0);
+          } else if (options.position === "top") {
+            containerRef.current.scrollTo({
+              top: 0,
+              behavior: options.behavior || "auto",
+            });
+          } else if (typeof options.index === "number") {
+            if (needsHeightRecalculationRef.current) {
+              updateAccumulatedHeights();
+              needsHeightRecalculationRef.current = false;
+            }
+            const offset = getOffsetForIndex(options.index ?? 0);
+            containerRef.current.scrollTo({
+              top: offset,
+              behavior: options.behavior || "auto",
+            });
+          }
+        };
+
+        executeScroll();
+        if (options.behavior === "smooth") {
+          setTimeout(executeScroll, 100);
+        }
+      },
+      getContainer: () => containerRef.current,
+    }),
+    [
+      updateItemHeight,
+      lockBottomUntilStable,
+      getOffsetForIndex,
+      updateAccumulatedHeights,
+    ]
+  );
 
   return (
     <div
@@ -701,7 +696,6 @@ function VirtualListInner<T extends { message?: { id?: string | number } }>(
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {/* 加载提示 */}
       {!isLoadingMore && isLast && (
         <div className="flex justify-center absolute left-1/2 transform -translate-x-1/2 pt-2.5">
           <span className="text-xs text-gray-500">以下是全部消息内容</span>
@@ -714,10 +708,8 @@ function VirtualListInner<T extends { message?: { id?: string | number } }>(
         </div>
       )}
 
-      {/* Phantom 元素 */}
       <div ref={phantomRef} className="virtual-list-phantom" />
 
-      {/* Content 元素 */}
       <div ref={contentRef} className="virtual-list-content">
         {visibleData.map((item) => (
           <div
@@ -733,7 +725,6 @@ function VirtualListInner<T extends { message?: { id?: string | number } }>(
   );
 }
 
-// 使用 forwardRef 包装组件
 export const VirtualList = forwardRef(VirtualListInner) as <
   T extends { message?: { id?: string | number } }
 >(
