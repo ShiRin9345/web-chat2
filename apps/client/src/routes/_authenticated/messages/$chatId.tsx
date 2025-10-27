@@ -128,6 +128,7 @@ function ChatPage() {
             groupName={chatInfo.name}
             groupAvatar={chatInfo.avatar}
             currentUserId={currentUserId}
+            creatorId={chatInfo.creatorId || ""}
           />
         )}
       </div>

@@ -121,3 +121,46 @@ export function useLeaveGroup() {
     },
   });
 }
+
+// 修改成员角色（仅群主）
+export function useChangeMemberRole() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ groupId, memberId, role }: { groupId: string; memberId: string; role: 'admin' | 'member' }) => {
+      const response = await axios.patch(
+        `${API_BASE}/groups/${groupId}/members/${memberId}/role`,
+        { role },
+        {
+          withCredentials: true,
+        }
+      );
+      return response.data;
+    },
+    onSuccess: (_, { groupId }) => {
+      // 刷新群成员列表
+      queryClient.invalidateQueries({ queryKey: ["groupMembers", groupId] });
+    },
+  });
+}
+
+// 踢出成员（管理员及以上）
+export function useRemoveMember() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ groupId, memberId }: { groupId: string; memberId: string }) => {
+      const response = await axios.delete(
+        `${API_BASE}/groups/${groupId}/members/${memberId}`,
+        {
+          withCredentials: true,
+        }
+      );
+      return response.data;
+    },
+    onSuccess: (_, { groupId }) => {
+      // 刷新群成员列表
+      queryClient.invalidateQueries({ queryKey: ["groupMembers", groupId] });
+    },
+  });
+}

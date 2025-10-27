@@ -15,6 +15,7 @@ interface ChatInfo {
   name: string;
   avatar: string | null;
   isOnline: boolean;
+  creatorId?: string; // 群主 ID（仅群聊）
 }
 
 interface UseChatInfoReturn {
@@ -137,6 +138,7 @@ export function useChatInfo({ chatId }: UseChatInfoParams): UseChatInfoReturn {
           ? groupInfo.avatar
           : null,
       isOnline,
+      creatorId: type === "group" && groupInfo ? groupInfo.creatorId : undefined,
     };
   }, [type, id, finalFriendInfo, groupInfo, onlineFriends]);
 

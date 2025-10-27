@@ -14,8 +14,8 @@ import { ScrollArea } from "@workspace/ui/components/scroll-area";
 import { Separator } from "@workspace/ui/components/separator";
 import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
-import { Users, Crown, UserPlus, LogOut, Loader2, Shield } from "lucide-react";
-import { useGroupMembers, useLeaveGroup } from "@/queries/groups";
+import { Users, Crown, UserPlus, LogOut, Loader2, Shield, MoreVertical, UserMinus, UserCog } from "lucide-react";
+import { useGroupMembers, useLeaveGroup, useChangeMemberRole, useRemoveMember } from "@/queries/groups";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useSocket } from "@/providers/SocketProvider";
@@ -27,6 +27,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@workspace/ui/components/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@workspace/ui/components/dropdown-menu";
 
 interface GroupInfoSheetProps {
   open: boolean;
@@ -35,6 +41,7 @@ interface GroupInfoSheetProps {
   groupName: string;
   groupAvatar: string | null;
   currentUserId: string;
+  creatorId: string; // 群主 ID
 }
 
 export function GroupInfoSheet({
@@ -44,9 +51,12 @@ export function GroupInfoSheet({
   groupName,
   groupAvatar,
   currentUserId,
+  creatorId,
 }: GroupInfoSheetProps) {
   const { data: members, isLoading } = useGroupMembers(groupId);
   const leaveGroup = useLeaveGroup();
+  const changeMemberRole = useChangeMemberRole();
+  const removeMember = useRemoveMember();
   const navigate = useNavigate();
   const socket = useSocket();
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
@@ -59,6 +69,7 @@ export function GroupInfoSheet({
   // 判断当前用户的角色
   const currentUserMember = members?.find((m) => m.id === currentUserId);
   const isAdmin = currentUserMember?.role === "admin";
+  const isCreator = creatorId === currentUserId;
   const canLeave = !isAdmin; // 普通成员可以退出，管理员不能
 
   // 调试信息
@@ -84,6 +95,30 @@ export function GroupInfoSheet({
     } catch (error: any) {
       console.error("Failed to leave group:", error);
       alert(error.response?.data?.error || "退出群聊失败");
+    }
+  };
+
+  // 修改成员角色
+  const handleChangeRole = async (memberId: string, newRole: 'admin' | 'member') => {
+    try {
+      await changeMemberRole.mutateAsync({ groupId, memberId, role: newRole });
+    } catch (error: any) {
+      console.error("Failed to change role:", error);
+      alert(error.response?.data?.error || "修改角色失败");
+    }
+  };
+
+  // 踢出成员
+  const handleRemoveMember = async (memberId: string, memberName: string) => {
+    if (!confirm(`确定要移除 "${memberName}" 吗？`)) {
+      return;
+    }
+    
+    try {
+      await removeMember.mutateAsync({ groupId, memberId });
+    } catch (error: any) {
+      console.error("Failed to remove member:", error);
+      alert(error.response?.data?.error || "移除成员失败");
     }
   };
 
@@ -148,7 +183,7 @@ export function GroupInfoSheet({
                     {admins.map((member) => (
                       <div
                         key={member.id}
-                        className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-accent transition-colors cursor-pointer"
+                        className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-accent transition-colors"
                       >
                         <div className="relative">
                           <Avatar className="h-10 w-10">
@@ -177,6 +212,30 @@ export function GroupInfoSheet({
                             {member.email}
                           </p>
                         </div>
+                        
+                        {/* 群主可以管理其他管理员 */}
+                        {isCreator && member.id !== currentUserId && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleChangeRole(member.id, 'member')}>
+                                <UserCog className="h-4 w-4 mr-2" />
+                                设为普通成员
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleRemoveMember(member.id, member.name)}
+                                className="text-destructive"
+                              >
+                                <UserMinus className="h-4 w-4 mr-2" />
+                                移除成员
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                       </div>
                     ))}
 
@@ -184,7 +243,7 @@ export function GroupInfoSheet({
                     {regularMembers.map((member) => (
                       <div
                         key={member.id}
-                        className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-accent transition-colors cursor-pointer"
+                        className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-accent transition-colors"
                       >
                         <Avatar className="h-10 w-10">
                           <AvatarImage src={member.image || undefined} />
@@ -200,6 +259,32 @@ export function GroupInfoSheet({
                             {member.email}
                           </p>
                         </div>
+                        
+                        {/* 管理员可以管理普通成员 */}
+                        {isAdmin && member.id !== currentUserId && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {isCreator && (
+                                <DropdownMenuItem onClick={() => handleChangeRole(member.id, 'admin')}>
+                                  <UserCog className="h-4 w-4 mr-2" />
+                                  设为管理员
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem 
+                                onClick={() => handleRemoveMember(member.id, member.name)}
+                                className="text-destructive"
+                              >
+                                <UserMinus className="h-4 w-4 mr-2" />
+                                移除成员
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                       </div>
                     ))}
                   </div>
