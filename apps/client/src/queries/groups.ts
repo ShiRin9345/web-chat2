@@ -94,3 +94,30 @@ export function useGroupMembers(groupId: string) {
     enabled: !!groupId,
   });
 }
+
+// 退出群聊
+export function useLeaveGroup() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (groupId: string) => {
+      const response = await axios.delete(
+        `${API_BASE}/groups/${groupId}/leave`,
+        {
+          withCredentials: true, // 发送 cookies
+        }
+      );
+      return response.data;
+    },
+    onSuccess: (_, groupId) => {
+      // 刷新群聊列表
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
+      // 刷新群成员列表
+      queryClient.invalidateQueries({ queryKey: ["groupMembers", groupId] });
+      // 清除该群的消息缓存
+      queryClient.invalidateQueries({
+        queryKey: ["messages", `group-${groupId}`],
+      });
+    },
+  });
+}

@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, groups, groupMembers, user } from "@workspace/database";
 import { eq, and } from "drizzle-orm";
 import { authenticateUser } from "@/middleware/auth.ts";
+import type { Server } from "socket.io";
 
 const router = Router();
 
@@ -181,6 +182,82 @@ router.get("/:groupId/members", authenticateUser, async (req, res) => {
   } catch (error) {
     console.error("Error fetching group members:", error);
     res.status(500).json({ error: "Failed to fetch group members" });
+  }
+});
+
+// 退出群聊
+router.delete("/:groupId/leave", authenticateUser, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
+    const { groupId } = req.params;
+
+    if (!groupId) {
+      return res.status(400).json({ error: "Group ID is required" });
+    }
+
+    // 检查群聊是否存在
+    const [group] = await db
+      .select()
+      .from(groups)
+      .where(eq(groups.id, groupId!));
+
+    if (!group) {
+      return res.status(404).json({ error: "Group not found" });
+    }
+
+    // 检查是否是群成员
+    const [member] = await db
+      .select()
+      .from(groupMembers)
+      .where(
+        and(
+          eq(groupMembers.groupId, groupId!),
+          eq(groupMembers.userId, userId!)
+        )
+      );
+
+    if (!member) {
+      return res.status(400).json({ error: "Not a member of this group" });
+    }
+
+    // 如果是群主，不允许退出（需要先转让群主）
+    if (group.creatorId === userId) {
+      return res
+        .status(400)
+        .json({
+          error:
+            "Group creator cannot leave. Please transfer ownership first or delete the group.",
+        });
+    }
+
+    // 删除群成员记录
+    await db
+      .delete(groupMembers)
+      .where(
+        and(
+          eq(groupMembers.groupId, groupId!),
+          eq(groupMembers.userId, userId!)
+        )
+      );
+
+    // 获取 Socket.IO 实例
+    const io = req.app.get("io") as Server;
+    if (io) {
+      // 通知群组成员有人退出
+      io.to(`group:${groupId}`).emit("group:member-left", {
+        groupId,
+        userId,
+      });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error leaving group:", error);
+    res.status(500).json({ error: "Failed to leave group" });
   }
 });
 

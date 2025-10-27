@@ -49,6 +49,9 @@ export class SocketService {
         this.handleGetOnlineFriends(socket, callback)
       );
 
+      // 退出群聊
+      socket.on("group:leave", (data) => this.handleGroupLeave(socket, data));
+
       // 用户断开连接
       socket.on("disconnect", () => this.handleDisconnect(socket));
 
@@ -283,6 +286,12 @@ export class SocketService {
       console.error("获取在线好友失败:", error);
       callback([]);
     }
+  }
+
+  private handleGroupLeave(socket: Socket, data: { groupId: string }) {
+    const { groupId } = data;
+    console.log(`用户退出群聊房间: group:${groupId}`);
+    socket.leave(`group:${groupId}`);
   }
 
   private async handleDisconnect(socket: Socket) {
