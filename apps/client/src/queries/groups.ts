@@ -127,7 +127,15 @@ export function useChangeMemberRole() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ groupId, memberId, role }: { groupId: string; memberId: string; role: 'admin' | 'member' }) => {
+    mutationFn: async ({
+      groupId,
+      memberId,
+      role,
+    }: {
+      groupId: string;
+      memberId: string;
+      role: "admin" | "member";
+    }) => {
       const response = await axios.patch(
         `${API_BASE}/groups/${groupId}/members/${memberId}/role`,
         { role },
@@ -149,7 +157,13 @@ export function useRemoveMember() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ groupId, memberId }: { groupId: string; memberId: string }) => {
+    mutationFn: async ({
+      groupId,
+      memberId,
+    }: {
+      groupId: string;
+      memberId: string;
+    }) => {
       const response = await axios.delete(
         `${API_BASE}/groups/${groupId}/members/${memberId}`,
         {

@@ -14,8 +14,23 @@ import { ScrollArea } from "@workspace/ui/components/scroll-area";
 import { Separator } from "@workspace/ui/components/separator";
 import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
-import { Users, Crown, UserPlus, LogOut, Loader2, Shield, MoreVertical, UserMinus, UserCog } from "lucide-react";
-import { useGroupMembers, useLeaveGroup, useChangeMemberRole, useRemoveMember } from "@/queries/groups";
+import {
+  Users,
+  Crown,
+  UserPlus,
+  LogOut,
+  Loader2,
+  Shield,
+  MoreVertical,
+  UserMinus,
+  UserCog,
+} from "lucide-react";
+import {
+  useGroupMembers,
+  useLeaveGroup,
+  useChangeMemberRole,
+  useRemoveMember,
+} from "@/queries/groups";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useSocket } from "@/providers/SocketProvider";
@@ -99,7 +114,10 @@ export function GroupInfoSheet({
   };
 
   // 修改成员角色
-  const handleChangeRole = async (memberId: string, newRole: 'admin' | 'member') => {
+  const handleChangeRole = async (
+    memberId: string,
+    newRole: "admin" | "member"
+  ) => {
     try {
       await changeMemberRole.mutateAsync({ groupId, memberId, role: newRole });
     } catch (error: any) {
@@ -113,7 +131,7 @@ export function GroupInfoSheet({
     if (!confirm(`确定要移除 "${memberName}" 吗？`)) {
       return;
     }
-    
+
     try {
       await removeMember.mutateAsync({ groupId, memberId });
     } catch (error: any) {
@@ -212,22 +230,32 @@ export function GroupInfoSheet({
                             {member.email}
                           </p>
                         </div>
-                        
+
                         {/* 群主可以管理其他管理员 */}
                         {isCreator && member.id !== currentUserId && (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                              >
                                 <MoreVertical className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleChangeRole(member.id, 'member')}>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  handleChangeRole(member.id, "member")
+                                }
+                              >
                                 <UserCog className="h-4 w-4 mr-2" />
                                 设为普通成员
                               </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={() => handleRemoveMember(member.id, member.name)}
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  handleRemoveMember(member.id, member.name)
+                                }
                                 className="text-destructive"
                               >
                                 <UserMinus className="h-4 w-4 mr-2" />
@@ -259,24 +287,34 @@ export function GroupInfoSheet({
                             {member.email}
                           </p>
                         </div>
-                        
+
                         {/* 管理员可以管理普通成员 */}
                         {isAdmin && member.id !== currentUserId && (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                              >
                                 <MoreVertical className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               {isCreator && (
-                                <DropdownMenuItem onClick={() => handleChangeRole(member.id, 'admin')}>
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    handleChangeRole(member.id, "admin")
+                                  }
+                                >
                                   <UserCog className="h-4 w-4 mr-2" />
                                   设为管理员
                                 </DropdownMenuItem>
                               )}
-                              <DropdownMenuItem 
-                                onClick={() => handleRemoveMember(member.id, member.name)}
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  handleRemoveMember(member.id, member.name)
+                                }
                                 className="text-destructive"
                               >
                                 <UserMinus className="h-4 w-4 mr-2" />

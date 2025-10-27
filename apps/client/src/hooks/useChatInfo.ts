@@ -138,7 +138,8 @@ export function useChatInfo({ chatId }: UseChatInfoParams): UseChatInfoReturn {
           ? groupInfo.avatar
           : null,
       isOnline,
-      creatorId: type === "group" && groupInfo ? groupInfo.creatorId : undefined,
+      creatorId:
+        type === "group" && groupInfo ? groupInfo.creatorId : undefined,
     };
   }, [type, id, finalFriendInfo, groupInfo, onlineFriends]);
 
