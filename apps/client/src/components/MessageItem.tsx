@@ -29,46 +29,43 @@ export const MessageItem = memo(function MessageItem({
   return (
     <div
       className={cn(
-        "flex gap-2 items-end",
+        "flex gap-3 items-start",
         isOwnMessage ? "flex-row-reverse" : "flex-row"
       )}
     >
       {/* 头像 - 双方都显示 */}
-      <Avatar className="w-8 h-8">
+      <Avatar className="w-8 h-8 flex-shrink-0">
         <AvatarImage src={message.sender.image || undefined} />
         <AvatarFallback>
           {message.sender.name?.[0]?.toUpperCase() || "U"}
         </AvatarFallback>
       </Avatar>
 
-      {/* 消息内容 */}
+      {/* 消息内容区域 */}
       <div
         className={cn(
           "flex flex-col gap-1 max-w-[70%]",
           isOwnMessage ? "items-end" : "items-start"
         )}
       >
-        {/* 发送者名称 - 只有对方消息显示 */}
-        {!isOwnMessage && (
-          <span className="text-xs text-muted-foreground px-3">
-            {message.sender.name}
-          </span>
-        )}
+        {/* 1. 时间戳 */}
+        <span className="text-xs text-muted-foreground">
+          {formatTime(message.createdAt)}
+        </span>
 
-        {/* 消息气泡 */}
-        <div className="flex items-end gap-2">
-          <div
-            className={cn(
-              "rounded-2xl px-4 py-2 break-words",
-              isOwnMessage
-                ? "bg-primary text-primary-foreground rounded-br-sm"
-                : "bg-muted rounded-bl-sm"
-            )}
-          >
-            {renderMessageContent(message)}
-          </div>
+        {/* 2. 发送者名称 */}
+        <span className="text-xs font-medium text-foreground">
+          {message.sender.name}
+        </span>
 
-          {/* 消息状态指示器 - 只有自己的消息显示 */}
+        {/* 3. 消息气泡容器 */}
+        <div
+          className={cn(
+            "flex items-end gap-2 w-full",
+            isOwnMessage ? "justify-end" : "justify-start"
+          )}
+        >
+          {/* 消息状态指示器 - 只有自己的消息显示，放在消息左边 */}
           {isOwnMessage && (
             <div className="flex items-center mb-1">
               {isPending && (
@@ -85,12 +82,18 @@ export const MessageItem = memo(function MessageItem({
               )}
             </div>
           )}
-        </div>
 
-        {/* 时间戳 */}
-        <span className="text-xs text-muted-foreground px-3">
-          {formatTime(message.createdAt)}
-        </span>
+          <div
+            className={cn(
+              "rounded-2xl px-4 py-2 break-words",
+              isOwnMessage
+                ? "bg-primary text-primary-foreground rounded-tr-sm"
+                : "bg-muted rounded-tl-sm"
+            )}
+          >
+            {renderMessageContent(message)}
+          </div>
+        </div>
       </div>
     </div>
   );
