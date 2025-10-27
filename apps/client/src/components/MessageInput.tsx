@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import type { KeyboardEvent, ChangeEvent } from "react";
 import { Button } from "@workspace/ui/components/button";
 import { Textarea } from "@workspace/ui/components/textarea";
+import { Kbd, KbdGroup } from "@workspace/ui/components/kbd";
 import { Send, Image as ImageIcon, Paperclip, X, Loader2 } from "lucide-react";
 import { cn } from "@workspace/ui/lib/utils";
 import { uploadFileToOSS, formatFileSize } from "../utils/ossUpload";
@@ -252,9 +253,21 @@ export function MessageInput({
           <Send className="h-4 w-4" />
         </Button>
       </div>
-      <p className="text-xs text-muted-foreground mt-2">
-        Enter 发送消息,Ctrl/Cmd + Enter 换行
-      </p>
+      <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+        <div className="flex items-center gap-1.5">
+          <Kbd>Enter</Kbd>
+          <span>发送消息</span>
+        </div>
+        <span>·</span>
+        <div className="flex items-center gap-1.5">
+          <KbdGroup>
+            <Kbd>Ctrl</Kbd>
+            <span>+</span>
+            <Kbd>Enter</Kbd>
+          </KbdGroup>
+          <span>换行</span>
+        </div>
+      </div>
     </div>
   );
 }
