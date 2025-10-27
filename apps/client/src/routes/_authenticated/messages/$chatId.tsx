@@ -13,6 +13,7 @@ import { MessageInput } from "@/components/MessageInput";
 import { GroupInfoSheet } from "@/components/GroupInfoSheet";
 import { useSendMessage } from "@/hooks/useSendMessage";
 import { authClient } from "@/lib/auth-client";
+import { DropProvider } from "@/providers/DropProvider";
 
 export const Route = createFileRoute("/_authenticated/messages/$chatId")({
   component: ChatPage,
@@ -42,74 +43,81 @@ function ChatPage() {
   const [isGroupInfoOpen, setIsGroupInfoOpen] = useState(false);
 
   return (
-    <div className="h-full flex flex-col">
-      {/* 聊天头部 */}
-      <div className="p-4 border-b flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="relative">
-            <Avatar className="h-10 w-10">
-              <AvatarImage src={chatInfo.avatar || undefined} />
-              <AvatarFallback>{chatInfo.name.charAt(0)}</AvatarFallback>
-            </Avatar>
-            {chatInfo.isOnline && (
-              <div className="absolute -bottom-1 -right-1 h-3 w-3 bg-green-500 rounded-full border-2 border-background" />
-            )}
+    <DropProvider
+      chatId={chatId}
+      currentUserId={currentUserId}
+      currentUserName={currentUserName}
+      currentUserImage={currentUserImage}
+    >
+      <div className="h-full flex flex-col">
+        {/* 聊天头部 */}
+        <div className="p-4 border-b flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="relative">
+              <Avatar className="h-10 w-10">
+                <AvatarImage src={chatInfo.avatar || undefined} />
+                <AvatarFallback>{chatInfo.name.charAt(0)}</AvatarFallback>
+              </Avatar>
+              {chatInfo.isOnline && (
+                <div className="absolute -bottom-1 -right-1 h-3 w-3 bg-green-500 rounded-full border-2 border-background" />
+              )}
+            </div>
+            <div>
+              <h2 className="font-semibold">{chatInfo.name}</h2>
+              <p className="text-sm text-muted-foreground">
+                {chatInfo.isOnline ? "在线" : "离线"}
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="font-semibold">{chatInfo.name}</h2>
-            <p className="text-sm text-muted-foreground">
-              {chatInfo.isOnline ? "在线" : "离线"}
-            </p>
+
+          <div className="flex items-center space-x-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleAudioCall}
+              disabled={chatInfo.type !== "friend" || !chatInfo.isOnline}
+            >
+              <Phone className="h-4 w-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleVideoCall}
+              disabled={chatInfo.type !== "friend" || !chatInfo.isOnline}
+            >
+              <Video className="h-4 w-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                if (chatInfo.type === "group") {
+                  setIsGroupInfoOpen(true);
+                }
+              }}
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
           </div>
         </div>
 
-        <div className="flex items-center space-x-2">
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={handleAudioCall}
-            disabled={chatInfo.type !== "friend" || !chatInfo.isOnline}
-          >
-            <Phone className="h-4 w-4" />
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={handleVideoCall}
-            disabled={chatInfo.type !== "friend" || !chatInfo.isOnline}
-          >
-            <Video className="h-4 w-4" />
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => {
-              if (chatInfo.type === "group") {
-                setIsGroupInfoOpen(true);
-              }
-            }}
-          >
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
-        </div>
+        {/* 消息列表 */}
+        <ChatMessages chatId={chatId} currentUserId={currentUserId} />
+
+        {/* 消息输入 */}
+        <MessageInput onSend={sendMessage} currentUserId={currentUserId} />
+
+        {/* 群信息 Sheet */}
+        {chatInfo.type === "group" && (
+          <GroupInfoSheet
+            open={isGroupInfoOpen}
+            onOpenChange={setIsGroupInfoOpen}
+            groupId={chatInfo.id}
+            groupName={chatInfo.name}
+            groupAvatar={chatInfo.avatar}
+          />
+        )}
       </div>
-
-      {/* 消息列表 */}
-      <ChatMessages chatId={chatId} currentUserId={currentUserId} />
-
-      {/* 消息输入 */}
-      <MessageInput onSend={sendMessage} currentUserId={currentUserId} />
-
-      {/* 群信息 Sheet */}
-      {chatInfo.type === "group" && (
-        <GroupInfoSheet
-          open={isGroupInfoOpen}
-          onOpenChange={setIsGroupInfoOpen}
-          groupId={chatInfo.id}
-          groupName={chatInfo.name}
-          groupAvatar={chatInfo.avatar}
-        />
-      )}
-    </div>
+    </DropProvider>
   );
 }
