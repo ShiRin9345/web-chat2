@@ -87,19 +87,32 @@ export function ChatMessages({ chatId, currentUserId }: ChatMessagesProps) {
     // 跳过初次加载和加载更多时
     if (isInitialLoadRef.current || isFetchingNextPage) return;
 
-    // 如果消息数量增加，且当前在底部，则滚动到底部
+    // 如果消息数量增加，检查是否需要滚动
     if (messages.length > previousMessageCountRef.current) {
-      const wasAtBottom = isAtBottom();
+      // 获取最新的消息
+      const latestMessage = messages[0];
 
-      if (wasAtBottom) {
-        // 等待 DOM 更新后滚动
+      // 如果是自己发送的消息（包括临时消息），强制滚动到底部
+      if (latestMessage && latestMessage.senderId === currentUserId) {
         setTimeout(() => scrollToBottom("smooth"), 50);
+      } else {
+        // 别人发送的消息，只在底部时滚动
+        const wasAtBottom = isAtBottom();
+        if (wasAtBottom) {
+          setTimeout(() => scrollToBottom("smooth"), 50);
+        }
       }
-      // 注意：未读数的增加改由 WebSocket 事件直接处理，这里不再处理
     }
 
     previousMessageCountRef.current = messages.length;
-  }, [messages.length, isFetchingNextPage, isAtBottom, scrollToBottom]);
+  }, [
+    messages.length,
+    messages,
+    currentUserId,
+    isFetchingNextPage,
+    isAtBottom,
+    scrollToBottom,
+  ]);
 
   // 监听 WebSocket 新消息
   useEffect(() => {
@@ -198,20 +211,22 @@ export function ChatMessages({ chatId, currentUserId }: ChatMessagesProps) {
       // 处理滚动和未读计数
       // 如果是乐观更新的确认消息，不处理滚动（已经处理过了）
       if (!isOptimisticUpdate) {
-        const wasAtBottom = isAtBottom();
-
         // 如果是自己发送的消息，无论是否在底部都滚动到底部
         if (isOwnMessage) {
           // 对于图片消息，需要更长的延迟等待加载
           const delay = message.type === "image" ? 150 : 50;
           setTimeout(() => scrollToBottom("smooth"), delay);
-        } else if (wasAtBottom) {
-          // 别人发送的消息，且在底部，自动滚动
-          const delay = message.type === "image" ? 150 : 50;
-          setTimeout(() => scrollToBottom("smooth"), delay);
         } else {
-          // 别人发送的消息，不在底部，增加未读数
-          setUnreadCount((prev) => prev + 1);
+          // 别人发送的消息
+          const wasAtBottom = isAtBottom();
+          if (wasAtBottom) {
+            // 在底部，自动滚动
+            const delay = message.type === "image" ? 150 : 50;
+            setTimeout(() => scrollToBottom("smooth"), delay);
+          } else {
+            // 不在底部，增加未读数
+            setUnreadCount((prev) => prev + 1);
+          }
         }
       }
     };
