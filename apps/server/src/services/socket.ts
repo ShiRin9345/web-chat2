@@ -7,7 +7,11 @@ import {
   validateFriendship,
 } from "./callRecords.js";
 import { db } from "@workspace/database";
-import { messages as messagesTable, user as userTable } from "@workspace/database/schema";
+import {
+  messages as messagesTable,
+  user as userTable,
+  groupMembers,
+} from "@workspace/database/schema";
 import { eq } from "drizzle-orm";
 
 export class SocketService {
@@ -94,14 +98,32 @@ export class SocketService {
     } catch (error) {
       console.error("获取好友列表失败:", error);
     }
+
+    // 加入用户所属的所有群聊房间
+    try {
+      const userGroups = await db
+        .select({ groupId: groupMembers.groupId })
+        .from(groupMembers)
+        .where(eq(groupMembers.userId, userId));
+
+      for (const group of userGroups) {
+        socket.join(`group:${group.groupId}`);
+        console.log(`用户 ${userId} 加入群聊房间: group:${group.groupId}`);
+      }
+    } catch (error) {
+      console.error("加入群聊房间失败:", error);
+    }
   }
 
-  private async handleMessageSend(socket: Socket, data: {
-    recipientId: string;
-    content: string;
-    type?: "text" | "image" | "file";
-    tempId?: string;
-  }) {
+  private async handleMessageSend(
+    socket: Socket,
+    data: {
+      recipientId: string;
+      content: string;
+      type?: "text" | "image" | "file";
+      tempId?: string;
+    }
+  ) {
     console.log("收到消息:", data);
     const senderId = socket.data?.userId;
 
@@ -142,7 +164,9 @@ export class SocketService {
       };
 
       // 推送给接收者
-      this.io.to(`user:${data.recipientId}`).emit("message:new", messageWithSender);
+      this.io
+        .to(`user:${data.recipientId}`)
+        .emit("message:new", messageWithSender);
 
       // 也推送给发送者（用于多设备同步）
       socket.emit("message:new", messageWithSender);
@@ -150,16 +174,22 @@ export class SocketService {
       console.log("消息已保存并推送:", newMessage.id);
     } catch (error) {
       console.error("保存消息失败:", error);
-      socket.emit("message:error", { tempId: data.tempId, error: "发送消息失败" });
+      socket.emit("message:error", {
+        tempId: data.tempId,
+        error: "发送消息失败",
+      });
     }
   }
 
-  private async handleGroupMessage(socket: Socket, data: {
-    groupId: string;
-    content: string;
-    type?: "text" | "image" | "file";
-    tempId?: string;
-  }) {
+  private async handleGroupMessage(
+    socket: Socket,
+    data: {
+      groupId: string;
+      content: string;
+      type?: "text" | "image" | "file";
+      tempId?: string;
+    }
+  ) {
     console.log("收到群聊消息:", data);
     const senderId = socket.data?.userId;
 
@@ -200,7 +230,9 @@ export class SocketService {
       };
 
       // 推送给群组所有成员
-      this.io.to(`group:${data.groupId}`).emit("message:new", messageWithSender);
+      this.io
+        .to(`group:${data.groupId}`)
+        .emit("message:new", messageWithSender);
 
       // 也推送给发送者
       socket.emit("message:new", messageWithSender);
@@ -208,7 +240,10 @@ export class SocketService {
       console.log("群聊消息已保存并推送:", newMessage.id);
     } catch (error) {
       console.error("保存群聊消息失败:", error);
-      socket.emit("message:error", { tempId: data.tempId, error: "发送消息失败" });
+      socket.emit("message:error", {
+        tempId: data.tempId,
+        error: "发送消息失败",
+      });
     }
   }
 
