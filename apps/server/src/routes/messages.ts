@@ -157,6 +157,8 @@ messagesRouter.get("/", authenticateUser, async (req, res) => {
           id: userTable.id,
           name: userTable.name,
           image: userTable.image,
+          email: userTable.email,
+          code: userTable.code,
         },
       })
       .from(messagesTable)

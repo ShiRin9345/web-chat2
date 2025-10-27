@@ -145,12 +145,18 @@ export class SocketService {
         })
         .returning();
 
+      if (!newMessage) {
+        throw new Error("消息插入失败");
+      }
+
       // 获取发送者信息
       const [sender] = await db
         .select({
           id: userTable.id,
           name: userTable.name,
           image: userTable.image,
+          email: userTable.email,
+          code: userTable.code,
         })
         .from(userTable)
         .where(eq(userTable.id, senderId))
@@ -211,12 +217,18 @@ export class SocketService {
         })
         .returning();
 
+      if (!newMessage) {
+        throw new Error("消息插入失败");
+      }
+
       // 获取发送者信息
       const [sender] = await db
         .select({
           id: userTable.id,
           name: userTable.name,
           image: userTable.image,
+          email: userTable.email,
+          code: userTable.code,
         })
         .from(userTable)
         .where(eq(userTable.id, senderId))

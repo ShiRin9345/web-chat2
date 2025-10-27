@@ -169,6 +169,7 @@ router.get("/:groupId/members", authenticateUser, async (req, res) => {
         name: user.name,
         email: user.email,
         image: user.image,
+        code: user.code,
         role: groupMembers.role,
         joinedAt: groupMembers.joinedAt,
       })

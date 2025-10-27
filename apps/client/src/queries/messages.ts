@@ -13,7 +13,7 @@ export type TempMessage = MessageWithSender;
 
 // 消息类型（带发送者信息）
 export type MessageWithSender = Message & {
-  sender: Pick<User, "id" | "name" | "image">;
+  sender: Pick<User, "id" | "name" | "image" | "email" | "code">;
   tempId?: string; // 用于乐观更新的临时ID
   isPending?: boolean; // 是否正在发送中
   isFailed?: boolean; // 是否发送失败

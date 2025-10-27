@@ -5,6 +5,7 @@ import {
   AvatarImage,
 } from "@workspace/ui/components/avatar";
 import { ImageZoom } from "@workspace/ui/components/image-zoom";
+import { UserInfoPopover } from "@/components/UserInfoPopover";
 import { cn } from "@workspace/ui/lib/utils";
 import type { MessageWithSender } from "@/queries/messages";
 import type { TempMessage } from "@/queries/messages";
@@ -35,12 +36,22 @@ export const MessageItem = memo(function MessageItem({
       )}
     >
       {/* 头像 - 双方都显示 */}
-      <Avatar className="w-8 h-8 flex-shrink-0">
-        <AvatarImage src={message.sender.image || undefined} />
-        <AvatarFallback>
-          {message.sender.name?.[0]?.toUpperCase() || "U"}
-        </AvatarFallback>
-      </Avatar>
+      <UserInfoPopover
+        userId={message.sender.id}
+        userName={message.sender.name}
+        userAvatar={message.sender.image}
+        userEmail={message.sender.email}
+        userCode={message.sender.code}
+      >
+        <div className="cursor-pointer">
+          <Avatar className="w-8 h-8 flex-shrink-0">
+            <AvatarImage src={message.sender.image || undefined} />
+            <AvatarFallback>
+              {message.sender.name?.[0]?.toUpperCase() || "U"}
+            </AvatarFallback>
+          </Avatar>
+        </div>
+      </UserInfoPopover>
 
       {/* 消息内容区域 */}
       <div
@@ -55,7 +66,7 @@ export const MessageItem = memo(function MessageItem({
         </span>
 
         {/* 2. 发送者名称 */}
-        <span className="text-xs font-medium text-foreground">
+        <span className="text-sm font-medium text-foreground">
           {message.sender.name}
         </span>
 

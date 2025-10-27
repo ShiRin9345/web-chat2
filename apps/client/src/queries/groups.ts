@@ -10,6 +10,7 @@ export interface GroupMemberWithUser {
   name: string;
   email: string;
   image: string | null;
+  code: string | null;
   role: string;
   joinedAt: Date;
 }
