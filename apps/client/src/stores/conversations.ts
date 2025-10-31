@@ -61,6 +61,9 @@ interface ConversationsState {
   // 清除未读计数
   clearUnreadCount: (conversationId: string) => void;
 
+  // 清除未读计数并同步到数据库
+  markConversationAsRead: (conversationId: string) => Promise<void>;
+
   // 更新最后消息
   updateLastMessage: (
     conversationId: string,
@@ -150,6 +153,41 @@ export const useConversationsStore = create<ConversationsState>()(
             conv.id === conversationId ? { ...conv, unreadCount: 0 } : conv
           ),
         })),
+
+      // 清除未读计数并同步到服务器
+      markConversationAsRead: async (conversationId: string) => {
+        try {
+          // 先更新前端状态
+          set((state) => ({
+            conversations: state.conversations.map((conv) =>
+              conv.id === conversationId ? { ...conv, unreadCount: 0 } : conv
+            ),
+          }));
+
+          // 调用后端API删除未读记录
+          const response = await fetch(
+            `${API_BASE}/messages/conversations/${conversationId}/mark-read`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+            }
+          );
+
+          if (!response.ok) {
+            console.warn(
+              `[Store] Failed to mark conversation as read: ${response.status}`
+            );
+            return;
+          }
+
+          // 更新快照确保持久化
+          get().updateUnreadCountSnapshot();
+          console.log(`[Store] Conversation ${conversationId} marked as read`);
+        } catch (error) {
+          console.error("Failed to mark conversation as read:", error);
+        }
+      },
 
       updateLastMessage: (
         conversationId: string,

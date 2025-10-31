@@ -33,7 +33,7 @@ function MessagesLayout() {
     setLoadingStates,
     synchronizeConversations,
     setCurrentChatId,
-    clearUnreadCount,
+    markConversationAsRead,
     updateUnreadCountSnapshot,
     getIsLoading,
     getFilteredConversations,
@@ -60,7 +60,7 @@ function MessagesLayout() {
 
     if (chatId) {
       setCurrentChatId(chatId);
-      clearUnreadCount(chatId);
+      markConversationAsRead(chatId);
       updateUnreadCountSnapshot();
     } else {
       setCurrentChatId(null);
@@ -68,7 +68,7 @@ function MessagesLayout() {
   }, [
     location.pathname,
     setCurrentChatId,
-    clearUnreadCount,
+    markConversationAsRead,
     updateUnreadCountSnapshot,
   ]);
 
