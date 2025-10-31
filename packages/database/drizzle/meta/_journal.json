@@ -57,6 +57,13 @@
       "when": 1761900925993,
       "tag": "0007_acoustic_power_pack",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1761905133985,
+      "tag": "0008_funny_fat_cobra",
+      "breakpoints": true
     }
   ]
 }

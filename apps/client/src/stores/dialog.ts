@@ -7,6 +7,7 @@ export type DialogType =
   | "createGroup"
   | "incomingCall"
   | "activeCall"
+  | "activeGroupCall"
   | null;
 
 interface DialogState {

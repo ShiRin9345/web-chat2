@@ -11,6 +11,16 @@ export interface CallData {
   recordId?: string;
 }
 
+export interface GroupCallData {
+  roomId: string;
+  groupId: string;
+  groupName: string;
+  groupAvatar?: string;
+  callType: "video" | "audio";
+  isInitiator: boolean;
+  recordId?: string;
+}
+
 interface IncomingCallState {
   incomingCallData: CallData | null;
   setIncomingCallData: (data: CallData | null) => void;
@@ -24,7 +34,13 @@ interface ActiveCallState {
   endCall: () => void;
 }
 
-type CallState = IncomingCallState & ActiveCallState;
+interface GroupCallState {
+  activeGroupCall: GroupCallData | null;
+  startGroupCall: (data: GroupCallData) => void;
+  endGroupCall: () => void;
+}
+
+type CallState = IncomingCallState & ActiveCallState & GroupCallState;
 
 export const useCallStore = create<CallState>((set, get) => ({
   // 来电数据
@@ -62,6 +78,17 @@ export const useCallStore = create<CallState>((set, get) => ({
   },
   endCall: () => {
     set({ activeCallData: null });
+    useDialogStore.getState().closeDialog();
+  },
+
+  // 群组通话数据
+  activeGroupCall: null,
+  startGroupCall: (data) => {
+    set({ activeGroupCall: data });
+    useDialogStore.getState().openDialog("activeGroupCall");
+  },
+  endGroupCall: () => {
+    set({ activeGroupCall: null });
     useDialogStore.getState().closeDialog();
   },
 }));

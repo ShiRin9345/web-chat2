@@ -5,7 +5,8 @@ import { eq, and, or } from "drizzle-orm";
 export interface CreateCallRecordParams {
   roomId: string;
   callerId: string;
-  receiverId: string;
+  receiverId?: string; // 群组通话时可为空
+  groupId?: string; // 群组通话时不为空
   callType: "video" | "audio";
 }
 
@@ -21,14 +22,15 @@ export interface UpdateCallRecordParams {
  * 创建通话记录
  */
 export async function createCallRecord(params: CreateCallRecordParams) {
-  const { roomId, callerId, receiverId, callType } = params;
+  const { roomId, callerId, receiverId, groupId, callType } = params;
 
   const [record] = await db
     .insert(callRecords)
     .values({
       roomId,
       callerId,
-      receiverId,
+      receiverId: receiverId || null,
+      groupId: groupId || null,
       callType,
       status: "pending",
       duration: 0,

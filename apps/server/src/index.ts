@@ -31,6 +31,10 @@ export const io = new Server(httpServer, {
 // 将 Socket.io 实例存储到 Express 应用中，供路由使用
 app.set("io", io);
 
+// 创建 SocketService 实例并存储到 Express 应用中
+const socketService = new SocketService(io);
+app.set("socketService", socketService);
+
 app.use(
   cors({
     origin: ["http://localhost:3000", "http://8.152.201.45"],
@@ -55,8 +59,6 @@ app.use("/api", recommendationsRouter);
 app.get("/check", (_req, res) => {
   res.send("Hello World");
 });
-
-new SocketService(io);
 
 // 初始化 ChromaDB
 embeddingService

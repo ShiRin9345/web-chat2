@@ -55,7 +55,19 @@ export function ChatHeader({
           size="sm"
           variant="ghost"
           onClick={onAudioCall}
-          disabled={chatInfo.type !== "friend" || !chatInfo.isOnline}
+          disabled={
+            chatInfo.type === "unknown" ||
+            (chatInfo.type === "friend" && !chatInfo.isOnline)
+          }
+          title={
+            chatInfo.type === "unknown"
+              ? "未知聊天类型"
+              : chatInfo.type === "friend" && !chatInfo.isOnline
+              ? "对方不在线"
+              : chatInfo.type === "group"
+              ? "发起群组语音通话"
+              : "发起语音通话"
+          }
         >
           <Phone className="h-4 w-4" />
         </Button>
@@ -63,7 +75,19 @@ export function ChatHeader({
           size="sm"
           variant="ghost"
           onClick={onVideoCall}
-          disabled={chatInfo.type !== "friend" || !chatInfo.isOnline}
+          disabled={
+            chatInfo.type === "unknown" ||
+            (chatInfo.type === "friend" && !chatInfo.isOnline)
+          }
+          title={
+            chatInfo.type === "unknown"
+              ? "未知聊天类型"
+              : chatInfo.type === "friend" && !chatInfo.isOnline
+              ? "对方不在线"
+              : chatInfo.type === "group"
+              ? "发起群组视频通话"
+              : "发起视频通话"
+          }
         >
           <Video className="h-4 w-4" />
         </Button>

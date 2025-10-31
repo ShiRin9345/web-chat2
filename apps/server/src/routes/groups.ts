@@ -3,6 +3,7 @@ import { db, groups, groupMembers, user } from "@workspace/database";
 import { eq, and } from "drizzle-orm";
 import { authenticateUser } from "@/middleware/auth";
 import type { Server } from "socket.io";
+import type { SocketService } from "@/services/socket";
 
 const router = Router();
 
@@ -468,5 +469,29 @@ router.delete(
     }
   }
 );
+
+// 获取群组活跃通话状态
+router.get("/:groupId/active-call", authenticateUser, async (req, res) => {
+  try {
+    const { groupId } = req.params;
+
+    if (!groupId) {
+      return res.status(400).json({ error: "Group ID is required" });
+    }
+
+    // 获取 SocketService 实例
+    const socketService = req.app.get("socketService") as SocketService;
+    if (!socketService) {
+      return res.status(500).json({ error: "SocketService not initialized" });
+    }
+
+    // 从 SocketService 获取活跃通话信息
+    const status = socketService.getGroupCallStatus(groupId);
+    res.json(status);
+  } catch (error) {
+    console.error("Error fetching active call status:", error);
+    res.status(500).json({ error: "Failed to fetch active call status" });
+  }
+});
 
 export { router as groupsRouter };

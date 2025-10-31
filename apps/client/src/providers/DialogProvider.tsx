@@ -40,11 +40,18 @@ const VideoCallDialog = lazy(() =>
   }))
 );
 
+const GroupVideoCallDialog = lazy(() =>
+  import("@/components/dialogs/GroupVideoCallDialog").then((module) => ({
+    default: module.GroupVideoCallDialog,
+  }))
+);
+
 export function DialogProvider() {
   const { dialogType, isOpen, closeDialog } = useDialogStore();
   const {
     incomingCallData,
     activeCallData,
+    activeGroupCall,
     acceptIncomingCall,
     rejectIncomingCall,
   } = useCallStore();
@@ -64,6 +71,8 @@ export function DialogProvider() {
         return "加载通话界面...";
       case "activeCall":
         return "加载通话界面...";
+      case "activeGroupCall":
+        return "加载群组通话界面...";
       default:
         return "加载中...";
     }
@@ -106,6 +115,17 @@ export function DialogProvider() {
           callType={activeCallData.callType}
           isInitiator={activeCallData.isInitiator}
           recordId={activeCallData.recordId}
+        />
+      )}
+      {dialogType === "activeGroupCall" && activeGroupCall && (
+        <GroupVideoCallDialog
+          roomId={activeGroupCall.roomId}
+          groupId={activeGroupCall.groupId}
+          groupName={activeGroupCall.groupName}
+          groupAvatar={activeGroupCall.groupAvatar}
+          callType={activeGroupCall.callType}
+          isInitiator={activeGroupCall.isInitiator}
+          recordId={activeGroupCall.recordId}
         />
       )}
     </Suspense>

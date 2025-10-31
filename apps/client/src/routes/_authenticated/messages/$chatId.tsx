@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { ChatHeader } from "@/components/ChatHeader";
 import { ChatMessages } from "@/components/ChatMessages";
 import { MessageInput } from "@/components/MessageInput";
 import { ChatSheet } from "@/components/ChatSheet";
+import { GroupCallBanner } from "@/components/GroupCallBanner";
 import { useChatInfo } from "@/hooks/useChatInfo";
 import { useSendMessage } from "@/hooks/useSendMessage";
 import { useFileUpload } from "@/hooks/useFileUpload";
@@ -40,6 +41,14 @@ function ChatPage() {
     chatId,
   });
 
+  // 解析 groupId（仅群聊时使用）
+  const groupId = useMemo(() => {
+    if (chatId.startsWith("group-")) {
+      return chatId.replace("group-", "");
+    }
+    return null;
+  }, [chatId]);
+
   return (
     <DropProvider uploadState={uploadState}>
       <div className="h-full flex flex-col">
@@ -55,6 +64,10 @@ function ChatPage() {
             }
           }}
         />
+        {/* 群组通话横幅（仅群聊时显示） */}
+        {groupId && (
+          <GroupCallBanner groupId={groupId} chatId={chatId} />
+        )}
         <ChatMessages chatId={chatId} currentUserId={currentUserId} />
         <MessageInput onSend={sendMessage} uploadState={uploadState} />
         <ChatSheet

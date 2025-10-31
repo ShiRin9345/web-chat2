@@ -39,7 +39,7 @@ interface UseChatInfoReturn {
  */
 export function useChatInfo({ chatId }: UseChatInfoParams): UseChatInfoReturn {
   const socket = useSocket();
-  const { startCall } = useCallStore();
+  const { startCall, startGroupCall } = useCallStore();
   const queryClient = useQueryClient();
   const [onlineFriends, setOnlineFriends] = useState<string[]>([]);
 
@@ -153,12 +153,12 @@ export function useChatInfo({ chatId }: UseChatInfoParams): UseChatInfoReturn {
 
   // 发起视频通话
   const handleVideoCall = () => {
-    if (type !== "friend") {
-      alert("仅支持与好友进行通话");
+    if (type === "unknown") {
+      alert("未知聊天类型，无法发起通话");
       return;
     }
 
-    if (!chatInfo.isOnline) {
+    if (type === "friend" && !chatInfo.isOnline) {
       alert("对方当前不在线");
       return;
     }
@@ -168,24 +168,37 @@ export function useChatInfo({ chatId }: UseChatInfoParams): UseChatInfoReturn {
       return;
     }
 
-    startCall({
-      roomId: chatId,
-      friendId: id,
-      friendName: chatInfo.name,
-      friendAvatar: chatInfo.avatar || undefined,
-      callType: "video",
-      isInitiator: true,
-    });
+    if (type === "friend") {
+      // 好友通话
+      startCall({
+        roomId: chatId,
+        friendId: id,
+        friendName: chatInfo.name,
+        friendAvatar: chatInfo.avatar || undefined,
+        callType: "video",
+        isInitiator: true,
+      });
+    } else if (type === "group") {
+      // 群组通话
+      startGroupCall({
+        roomId: `group-call-${id}-${Date.now()}`,
+        groupId: id,
+        groupName: chatInfo.name,
+        groupAvatar: chatInfo.avatar || undefined,
+        callType: "video",
+        isInitiator: true,
+      });
+    }
   };
 
   // 发起语音通话
   const handleAudioCall = () => {
-    if (type !== "friend") {
-      alert("仅支持与好友进行通话");
+    if (type === "unknown") {
+      alert("未知聊天类型，无法发起通话");
       return;
     }
 
-    if (!chatInfo.isOnline) {
+    if (type === "friend" && !chatInfo.isOnline) {
       alert("对方当前不在线");
       return;
     }
@@ -195,14 +208,27 @@ export function useChatInfo({ chatId }: UseChatInfoParams): UseChatInfoReturn {
       return;
     }
 
-    startCall({
-      roomId: chatId,
-      friendId: id,
-      friendName: chatInfo.name,
-      friendAvatar: chatInfo.avatar || undefined,
-      callType: "audio",
-      isInitiator: true,
-    });
+    if (type === "friend") {
+      // 好友通话
+      startCall({
+        roomId: chatId,
+        friendId: id,
+        friendName: chatInfo.name,
+        friendAvatar: chatInfo.avatar || undefined,
+        callType: "audio",
+        isInitiator: true,
+      });
+    } else if (type === "group") {
+      // 群组通话
+      startGroupCall({
+        roomId: `group-call-${id}-${Date.now()}`,
+        groupId: id,
+        groupName: chatInfo.name,
+        groupAvatar: chatInfo.avatar || undefined,
+        callType: "audio",
+        isInitiator: true,
+      });
+    }
   };
 
   return {

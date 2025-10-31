@@ -139,9 +139,12 @@ export const callRecords = pgTable("call_record", {
   callerId: text("caller_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
-  receiverId: text("receiver_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
+  receiverId: text("receiver_id").references(() => user.id, {
+    onDelete: "cascade",
+  }), // 群组通话时可为 null
+  groupId: uuid("group_id").references(() => groups.id, {
+    onDelete: "cascade",
+  }), // 群组通话时不为 null
   callType: text("call_type").notNull(), // 'video' | 'audio'
   status: text("status").notNull(), // 'completed' | 'missed' | 'rejected' | 'cancelled'
   duration: integer("duration").default(0).notNull(), // 通话时长（秒）
