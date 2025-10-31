@@ -18,6 +18,8 @@ export function useFriends() {
 
 // 获取好友申请列表
 export function useFriendRequests() {
+  const queryClient = useQueryClient();
+
   return useQuery<FriendRequest[]>({
     queryKey: ["friendRequests"],
     queryFn: async () => {
@@ -26,6 +28,8 @@ export function useFriendRequests() {
       });
       return response.data;
     },
+    staleTime: 5 * 60 * 1000, // 5分钟内不重新查询
+    gcTime: 10 * 60 * 1000, // 10分钟后清理缓存
   });
 }
 

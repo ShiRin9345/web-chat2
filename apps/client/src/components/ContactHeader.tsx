@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Input } from "@workspace/ui/components/input";
 import { Button } from "@workspace/ui/components/button";
 import { Badge } from "@workspace/ui/components/badge";
@@ -39,22 +38,28 @@ export function ContactHeader({
         >
           <UserPlus className="h-4 w-4" />
         </Button>
-        {pendingRequestsCount > 0 && (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => openDialog("friendRequests")}
-            className="w-10 h-10 p-0 relative"
-          >
-            <Bell className="h-4 w-4" />
+        {/* 铃鈴按钮始终显示，当有待处理请求时顯示彩章 */}
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => openDialog("friendRequests")}
+          className="w-10 h-10 p-0 relative"
+          title={
+            pendingRequestsCount > 0
+              ? `${pendingRequestsCount} 个待处理的好友请求`
+              : "好友请求"
+          }
+        >
+          <Bell className="h-4 w-4" />
+          {pendingRequestsCount > 0 && (
             <Badge
               variant="destructive"
               className="absolute -top-1 -right-1 h-5 w-5 text-xs p-0 flex items-center justify-center"
             >
               {pendingRequestsCount}
             </Badge>
-          </Button>
-        )}
+          )}
+        </Button>
       </div>
     </div>
   );

@@ -74,19 +74,34 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
     // 监听好友请求被接受的事件
     const handleFriendRequestAccepted = () => {
-      console.log("好友请求被接受，正在重新加载好友列表和会话列表");
-      // 使好友列表和会话列表失效，触发重新查询
+      console.log(
+        "好友请求被接受，正在重新加载好友列表、会话列表和好友请求列表"
+      );
+      // 使好友列表、会话列表和好友请求列表失效，触发重新查询
       queryClient.invalidateQueries({ queryKey: ["friends"] });
       queryClient.invalidateQueries({ queryKey: ["chats"] });
+      queryClient.invalidateQueries({ queryKey: ["friendRequests"] });
+    };
+
+    // 监听接收到新好友请求的事件
+    const handleFriendRequestNew = () => {
+      console.log("接收到新的好友请求，正在重新加载好友请求列表");
+      queryClient.invalidateQueries({ queryKey: ["friendRequests"] });
     };
 
     // 注册事件监听器
     socket.on("friend:online", handleFriendOnline);
-    socket.on("friend:offline", handleFriendOffline);
+    // 监听好友请求被拒绝的事件
+    const handleFriendRequestRejected = () => {
+      console.log("好友请求被拒绝，正在重新加载好友请求列表");
+      queryClient.invalidateQueries({ queryKey: ["friendRequests"] });
+    };
     socket.on("connect", handleConnect);
     socket.on("disconnect", handleDisconnect);
     socket.on("message:new", handleNewMessageGlobal);
     socket.on("friend-request:accepted", handleFriendRequestAccepted);
+    socket.on("friend-request:rejected", handleFriendRequestRejected);
+    socket.on("friend-request:new", handleFriendRequestNew);
 
     // 初始化在线好友列表
     socket.emit("user:get-online-friends", (onlineFriendIds: string[]) => {
@@ -101,6 +116,8 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       socket.off("disconnect", handleDisconnect);
       socket.off("message:new", handleNewMessageGlobal);
       socket.off("friend-request:accepted", handleFriendRequestAccepted);
+      socket.off("friend-request:rejected", handleFriendRequestRejected);
+      socket.off("friend-request:new", handleFriendRequestNew);
       socket.disconnect();
       setIsConnected(false);
     };
