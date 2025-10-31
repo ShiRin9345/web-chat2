@@ -396,6 +396,7 @@ messagesRouter.post(
 
       // 同时标记消息表中的消息为已读
       if (isFriendChat) {
+        // 私聊：标记发送者发给当前用户的所有消息为已读
         await db
           .update(messagesTable)
           .set({ isRead: true })
@@ -405,6 +406,12 @@ messagesRouter.post(
               eq(messagesTable.recipientId, userId)
             )
           );
+      } else {
+        // 群聊：标记该群组中的所有消息为已读
+        await db
+          .update(messagesTable)
+          .set({ isRead: true })
+          .where(eq(messagesTable.groupId, id));
       }
 
       res.json({ success: true });

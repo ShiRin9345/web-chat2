@@ -259,7 +259,7 @@ export class SocketService {
           senderId,
           groupId: data.groupId,
           type: data.type || "text",
-          isRead: false, // 群聊消息通常不跟踪已读状态
+          isRead: false,
         })
         .returning();
 
@@ -294,6 +294,65 @@ export class SocketService {
 
       // 也推送给发送者
       socket.emit("message:new", messageWithSender);
+
+      // ========== 处理群聊消息的离线未读计数 ==========
+      // 获取该群组的所有成员
+      const groupMembers_ = await db
+        .select({ userId: groupMembers.userId })
+        .from(groupMembers)
+        .where(eq(groupMembers.groupId, data.groupId));
+
+      // 为每个不在线的成员记录未读计数
+      for (const member of groupMembers_) {
+        // 跳过发送者
+        if (member.userId === senderId) {
+          continue;
+        }
+
+        // 检查成员是否在线
+        const memberSocketId = onlineUserService.getSocketId(member.userId);
+        if (!memberSocketId) {
+          // 成员离线，记录未读计数
+          const existing = await db
+            .select()
+            .from(unreadMessagesTable)
+            .where(
+              and(
+                eq(unreadMessagesTable.userId, member.userId),
+                eq(unreadMessagesTable.groupId, data.groupId)
+              )
+            )
+            .limit(1);
+
+          if (existing.length > 0) {
+            // 更新现有记录
+            await db
+              .update(unreadMessagesTable)
+              .set({
+                unreadCount: existing[0].unreadCount + 1,
+                lastMessageTime: newMessage.createdAt,
+                updatedAt: new Date(),
+              })
+              .where(
+                and(
+                  eq(unreadMessagesTable.userId, member.userId),
+                  eq(unreadMessagesTable.groupId, data.groupId)
+                )
+              );
+          } else {
+            // 创建新记录
+            await db.insert(unreadMessagesTable).values({
+              userId: member.userId,
+              groupId: data.groupId,
+              unreadCount: 1,
+              lastMessageTime: newMessage.createdAt,
+            });
+          }
+          console.log(
+            `[群聊] 用户 ${member.userId} 离线，已记录群组 ${data.groupId} 的未读计数`
+          );
+        }
+      }
 
       console.log("群聊消息已保存并推送:", newMessage.id);
     } catch (error) {
