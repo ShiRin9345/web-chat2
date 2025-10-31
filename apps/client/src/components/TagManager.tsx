@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { Badge } from "@workspace/ui/badge";
-import { Button } from "@workspace/ui/button";
-import { Input } from "@workspace/ui/input";
-import { Label } from "@workspace/ui/label";
-import { ScrollArea } from "@workspace/ui/scroll-area";
+import { Badge } from "@workspace/ui/components/badge";
+import { Button } from "@workspace/ui/components/button";
+import { Input } from "@workspace/ui/components/input";
+import { Label } from "@workspace/ui/components/label";
+import { ScrollArea } from "@workspace/ui/components/scroll-area";
 import { X, Plus, Save, Loader2 } from "lucide-react";
 import { usePredefinedTags } from "@/queries/tags";
-import { cn } from "@workspace/ui/utils";
+import { cn } from "@workspace/ui/lib/utils";
 
 interface TagManagerProps {
   selectedTags: string[];
@@ -78,7 +78,9 @@ export function TagManager({
       {/* 已选标签 */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <Label>已选标签 ({selectedTags.length}/{MAX_TAGS})</Label>
+          <Label>
+            已选标签 ({selectedTags.length}/{MAX_TAGS})
+          </Label>
           <Button
             size="sm"
             onClick={() => onSave(selectedTags)}

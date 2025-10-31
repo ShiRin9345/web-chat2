@@ -1,8 +1,11 @@
 import { Loader2, RefreshCw, Sparkles } from "lucide-react";
-import { Button } from "@workspace/ui/button";
+import { Button } from "@workspace/ui/components/button";
 import { RecommendationItem } from "./RecommendationItem";
-import { useRecommendations, useRefreshRecommendations } from "@/queries/recommendations";
-import { Skeleton } from "@workspace/ui/skeleton";
+import {
+  useRecommendations,
+  useRefreshRecommendations,
+} from "@/queries/recommendations";
+import { Skeleton } from "@workspace/ui/components/skeleton";
 
 interface RecommendationListProps {
   onAddFriend: (userId: string) => void;

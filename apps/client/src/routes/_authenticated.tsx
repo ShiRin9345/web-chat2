@@ -26,6 +26,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { UserProfilePopover } from "@/components/UserProfilePopover";
 import { DialogProvider } from "@/providers/DialogProvider";
 import { CallProvider } from "@/providers/CallProvider";
+import { Toaster } from "@workspace/ui/components/sonner";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AuthenticatedLayout,
@@ -126,6 +127,7 @@ function AuthenticatedLayout() {
             </Sidebar>
             <Outlet />
           </div>
+          <Toaster />
           <DialogProvider />
           <CallProvider />
         </SidebarProvider>

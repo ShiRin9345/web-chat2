@@ -1,5 +1,7 @@
 import OpenAI from "openai";
 import { ChromaClient, Collection } from "chromadb";
+import { config } from "dotenv";
+config({ path: "../../.env.local" });
 
 /**
  * 向量化服务
@@ -160,7 +162,12 @@ class EmbeddingService {
       const userIds: string[] = [];
       const scores: number[] = [];
 
-      if (results.ids && results.ids[0] && results.distances && results.distances[0]) {
+      if (
+        results.ids &&
+        results.ids[0] &&
+        results.distances &&
+        results.distances[0]
+      ) {
         for (let i = 0; i < results.ids[0].length; i++) {
           const id = results.ids[0][i];
           if (id !== userId) {

@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { authClient } from "@/lib/auth-client";
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001";
+import axios from "axios";
+import { API_BASE } from "@/lib/api-config";
 
 /**
  * 用户标签接口
@@ -35,22 +34,13 @@ export function useUserTags() {
   return useQuery({
     queryKey: ["user", "tags"],
     queryFn: async (): Promise<UserTags> => {
-      const session = await authClient.getSession();
-      if (!session) {
-        throw new Error("未登录");
-      }
-
-      const response = await fetch(`${API_BASE_URL}/api/users/profile/tags`, {
-        headers: {
-          Authorization: `Bearer ${session.session.token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("获取用户标签失败");
-      }
-
-      return response.json();
+      const response = await axios.get<UserTags>(
+        `${API_BASE}/users/profile/tags`,
+        {
+          withCredentials: true,
+        }
+      );
+      return response.data;
     },
   });
 }
@@ -63,26 +53,14 @@ export function useUpdateUserTags() {
 
   return useMutation({
     mutationFn: async (tags: string[]): Promise<UserTags> => {
-      const session = await authClient.getSession();
-      if (!session) {
-        throw new Error("未登录");
-      }
-
-      const response = await fetch(`${API_BASE_URL}/api/users/profile/tags`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.session.token}`,
-        },
-        body: JSON.stringify({ tags }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "更新标签失败");
-      }
-
-      return response.json();
+      const response = await axios.put<UserTags>(
+        `${API_BASE}/users/profile/tags`,
+        { tags },
+        {
+          withCredentials: true,
+        }
+      );
+      return response.data;
     },
     onSuccess: () => {
       // 刷新用户标签缓存
@@ -100,27 +78,15 @@ export function usePredefinedTags(category?: string) {
   return useQuery({
     queryKey: ["tags", "predefined", category],
     queryFn: async (): Promise<PredefinedTagsResponse> => {
-      const url = new URL(`${API_BASE_URL}/api/tags/predefined`);
-      if (category) {
-        url.searchParams.set("category", category);
-      }
-
-      const session = await authClient.getSession();
-      if (!session) {
-        throw new Error("未登录");
-      }
-
-      const response = await fetch(url.toString(), {
-        headers: {
-          Authorization: `Bearer ${session.session.token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("获取预定义标签失败");
-      }
-
-      return response.json();
+      const params = category ? { category } : undefined;
+      const response = await axios.get<PredefinedTagsResponse>(
+        `${API_BASE}/tags/predefined`,
+        {
+          params,
+          withCredentials: true,
+        }
+      );
+      return response.data;
     },
     staleTime: 5 * 60 * 1000, // 5分钟缓存
   });

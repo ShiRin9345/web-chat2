@@ -11,7 +11,7 @@ import { RecommendationList } from "./RecommendationList";
 import { useUserTags, useUpdateUserTags } from "@/queries/tags";
 import { useSendFriendRequest } from "@/queries/friends";
 import { Settings, Loader2 } from "lucide-react";
-import { useToast } from "@workspace/ui/hooks/use-toast";
+import { toast } from "@workspace/ui/components/sonner";
 
 export function ContactRecommendations() {
   const [activeTab, setActiveTab] = useState<"recommendations" | "tags">(
@@ -22,7 +22,6 @@ export function ContactRecommendations() {
   const { data: userTagsData, isLoading: isLoadingTags } = useUserTags();
   const updateTagsMutation = useUpdateUserTags();
   const sendFriendRequestMutation = useSendFriendRequest();
-  const { toast } = useToast();
 
   // 同步用户标签到本地状态
   useState(() => {
@@ -43,15 +42,12 @@ export function ContactRecommendations() {
   const handleSaveTags = async (tags: string[]) => {
     try {
       await updateTagsMutation.mutateAsync(tags);
-      toast({
-        title: "保存成功",
+      toast.success("保存成功", {
         description: "标签已更新,推荐列表将自动刷新",
       });
       setActiveTab("recommendations");
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "保存失败",
+      toast.error("保存失败", {
         description: error.message || "请稍后重试",
       });
     }
@@ -63,14 +59,11 @@ export function ContactRecommendations() {
         toUserId: userId,
         message: "你好,我想加你为好友",
       });
-      toast({
-        title: "好友请求已发送",
+      toast.success("好友请求已发送", {
         description: "等待对方同意",
       });
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "发送失败",
+      toast.error("发送失败", {
         description: error.message || "请稍后重试",
       });
     }
