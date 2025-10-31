@@ -256,6 +256,20 @@ router.post("/accept/:requestId", authenticateUser, async (req, res) => {
     const io = req.app.get("io");
     if (io) {
       notifyFriendOnlineStatus(io, userId, request.fromUserId);
+      
+      // 发送 "friend-request:accepted" 事件给发送请求的用户，告诉他他的请求已被接受
+      // 遍历所有连接的 socket 并找到发送请求的用户
+      const allSockets = io.sockets.sockets;
+      for (const [, socket] of allSockets) {
+        if (socket.data?.userId === request.fromUserId) {
+          console.log(`囔告用户 ${request.fromUserId} 他的好友请求已被 ${userId} 接受`);
+          socket.emit("friend-request:accepted", {
+            fromUserId: request.fromUserId,
+            toUserId: userId,
+            acceptedAt: new Date().toISOString(),
+          });
+        }
+      }
     }
 
     res.json({ success: true });

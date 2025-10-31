@@ -5,6 +5,7 @@ import React, {
   useState,
   useRef,
 } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { socket } from "@/lib/socket";
 import { authClient } from "@/lib/auth-client";
 import { useConversationsStore } from "@/stores/conversations";
@@ -21,6 +22,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   const { data: session } = authClient.useSession();
   const [isConnected, setIsConnected] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
+  const queryClient = useQueryClient();
 
   const currentUserIdRef = useRef<string>("");
 
@@ -70,12 +72,21 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       store.handleNewMessage(message, currentUserIdRef.current);
     };
 
+    // 监听好友请求被接受的事件
+    const handleFriendRequestAccepted = () => {
+      console.log("好友请求被接受，正在重新加载好友列表和会话列表");
+      // 使好友列表和会话列表失效，触发重新查询
+      queryClient.invalidateQueries({ queryKey: ["friends"] });
+      queryClient.invalidateQueries({ queryKey: ["chats"] });
+    };
+
     // 注册事件监听器
     socket.on("friend:online", handleFriendOnline);
     socket.on("friend:offline", handleFriendOffline);
     socket.on("connect", handleConnect);
     socket.on("disconnect", handleDisconnect);
     socket.on("message:new", handleNewMessageGlobal);
+    socket.on("friend-request:accepted", handleFriendRequestAccepted);
 
     // 初始化在线好友列表
     socket.emit("user:get-online-friends", (onlineFriendIds: string[]) => {
@@ -89,10 +100,11 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       socket.off("connect", handleConnect);
       socket.off("disconnect", handleDisconnect);
       socket.off("message:new", handleNewMessageGlobal);
+      socket.off("friend-request:accepted", handleFriendRequestAccepted);
       socket.disconnect();
       setIsConnected(false);
     };
-  }, [session?.user?.id]);
+  }, [session?.user?.id, queryClient]);
 
   return (
     <SocketContext.Provider value={{ isConnected, onlineUsers }}>
