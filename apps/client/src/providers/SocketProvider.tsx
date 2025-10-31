@@ -6,6 +6,7 @@ import React, {
   useRef,
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { socket } from "@/lib/socket";
 import { authClient } from "@/lib/auth-client";
 import { useConversationsStore } from "@/stores/conversations";
@@ -23,6 +24,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   const [isConnected, setIsConnected] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const currentUserIdRef = useRef<string>("");
 
@@ -89,19 +91,49 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       queryClient.invalidateQueries({ queryKey: ["friendRequests"] });
     };
 
-    // 注册事件监听器
-    socket.on("friend:online", handleFriendOnline);
     // 监听好友请求被拒绝的事件
     const handleFriendRequestRejected = () => {
       console.log("好友请求被拒绝，正在重新加载好友请求列表");
       queryClient.invalidateQueries({ queryKey: ["friendRequests"] });
     };
+
+    // 监听好友被删除的事件
+    const handleFriendRemoved = (data: { removedFriendId: string; isInitiator: boolean }) => {
+      const { removedFriendId, isInitiator } = data;
+      console.log(
+        `好友 ${removedFriendId} 已被删除（isInitiator: ${isInitiator}），正在重新加载好友列表和会话列表`
+      );
+      
+      // 仅当用户是被删除方（isInitiator 为 false）时，才显示提示并跳转
+      if (!isInitiator) {
+        // 获取当前打开的聊天ID
+        const { currentChatId } = useConversationsStore.getState();
+        const chatIdWithPrefix = `friend-${removedFriendId}`;
+        
+        // 检查用户是否正在与被删除的好友聊天
+        if (currentChatId === chatIdWithPrefix) {
+          // 显示友好提示
+          alert("您已被该好友删除，将返回消息列表");
+          // 自动跳转到消息列表主页面
+          navigate({ to: "/messages" });
+        }
+      }
+      
+      // 无论是删除方还是被删除方，都需要使好友列表、会话列表失效，触发重新查询
+      queryClient.invalidateQueries({ queryKey: ["friends"] });
+      queryClient.invalidateQueries({ queryKey: ["chats"] });
+    };
+
+    // 注册事件监听器
+    socket.on("friend:online", handleFriendOnline);
+    socket.on("friend:offline", handleFriendOffline);
     socket.on("connect", handleConnect);
     socket.on("disconnect", handleDisconnect);
     socket.on("message:new", handleNewMessageGlobal);
     socket.on("friend-request:accepted", handleFriendRequestAccepted);
     socket.on("friend-request:rejected", handleFriendRequestRejected);
     socket.on("friend-request:new", handleFriendRequestNew);
+    socket.on("friend:removed", handleFriendRemoved);
 
     // 初始化在线好友列表
     socket.emit("user:get-online-friends", (onlineFriendIds: string[]) => {
@@ -118,10 +150,11 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       socket.off("friend-request:accepted", handleFriendRequestAccepted);
       socket.off("friend-request:rejected", handleFriendRequestRejected);
       socket.off("friend-request:new", handleFriendRequestNew);
+      socket.off("friend:removed", handleFriendRemoved);
       socket.disconnect();
       setIsConnected(false);
     };
-  }, [session?.user?.id, queryClient]);
+  }, [session?.user?.id, queryClient, navigate]);
 
   return (
     <SocketContext.Provider value={{ isConnected, onlineUsers }}>

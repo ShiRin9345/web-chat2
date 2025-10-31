@@ -493,12 +493,20 @@ router.delete("/:friendId", authenticateUser, async (req, res) => {
       const socketId1 = onlineUserService.getSocketId(userId);
       const socketId2 = onlineUserService.getSocketId(friendId);
 
+      // 通知删除方（userId）：我删除了friendId
       if (socketId1) {
-        io.to(socketId1).emit("friend:removed", friendId);
+        io.to(socketId1).emit("friend:removed", {
+          removedFriendId: friendId,
+          isInitiator: true, // 标记为删除方
+        });
       }
 
+      // 通知被删除方（friendId）：userId删除了我
       if (socketId2) {
-        io.to(socketId2).emit("friend:removed", userId);
+        io.to(socketId2).emit("friend:removed", {
+          removedFriendId: userId,
+          isInitiator: false, // 标记为被删除方
+        });
       }
     }
 
