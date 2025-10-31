@@ -1,5 +1,12 @@
 import { Router } from "express";
-import { db, friendships, friendRequests, user } from "@workspace/database";
+import {
+  db,
+  friendships,
+  friendRequests,
+  user,
+  messages,
+  unreadMessages,
+} from "@workspace/database";
 import { eq, and, or, like, ne } from "drizzle-orm";
 import { authenticateUser } from "@/middleware/auth";
 import { onlineUserService } from "@/services/onlineUsers";
@@ -388,6 +395,7 @@ router.delete("/:friendId", authenticateUser, async (req, res) => {
       return res.status(400).json({ error: "Cannot remove yourself" });
     }
 
+    // ... existing code ...
     // 删除双向好友关系
     await db
       .delete(friendships)
@@ -400,6 +408,35 @@ router.delete("/:friendId", authenticateUser, async (req, res) => {
           and(
             eq(friendships.userId, friendId),
             eq(friendships.friendId, userId)
+          )
+        )
+      );
+
+    // 同时删除两个用户之间的所有聊天消息
+    await db
+      .delete(messages)
+      .where(
+        or(
+          and(
+            eq(messages.senderId, userId),
+            eq(messages.recipientId, friendId)
+          ),
+          and(eq(messages.senderId, friendId), eq(messages.recipientId, userId))
+        )
+      );
+
+    // 删除两个用户之间的未读消息记录
+    await db
+      .delete(unreadMessages)
+      .where(
+        or(
+          and(
+            eq(unreadMessages.userId, userId),
+            eq(unreadMessages.senderId, friendId)
+          ),
+          and(
+            eq(unreadMessages.userId, friendId),
+            eq(unreadMessages.senderId, userId)
           )
         )
       );
