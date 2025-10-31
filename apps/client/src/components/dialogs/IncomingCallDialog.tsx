@@ -49,6 +49,7 @@ export function IncomingCallDialog({
       });
     }
     rejectIncomingCall();
+    onReject(); // 调用传入的 onReject 回调
   };
 
   return (

@@ -16,7 +16,7 @@ export function useMessages(chatId: string) {
   // 最终顺序：旧消息在上，新消息在下
   const allMessages = useMemo(() => {
     if (!query.data) return [];
-    
+
     // 将所有页的消息合并
     // 每页内部已经是降序（新->旧），所以需要反转每一页
     // 然后按页面顺序拼接（后面的页是更旧的消息）
@@ -24,7 +24,7 @@ export function useMessages(chatId: string) {
       .map((page) => [...page.messages].reverse()) // 每页内部反转
       .reverse() // 页面顺序反转，让旧的页在前面
       .flat(); // 展平
-    
+
     return messages;
   }, [query.data]);
 
@@ -50,47 +50,31 @@ export function addMessageToCache(
   chatId: string,
   newMessage: MessageWithSender
 ) {
-  queryClient.setQueryData(
-    ["messages", chatId],
-    (oldData: any) => {
-      if (!oldData) return oldData;
+  queryClient.setQueryData(["messages", chatId], (oldData: any) => {
+    if (!oldData) return oldData;
 
-<<<<<<< Local
-  return {
-    messages: allMessages,
-    hasNextPage: query.hasPreviousPage, // 使用 hasPreviousPage 因为我们是向上加载
-    isFetchingNextPage: query.isFetchingPreviousPage, // 使用 isFetchingPreviousPage
-    fetchNextPage: query.fetchPreviousPage, // 使用 fetchPreviousPage
-    isLoading: query.isLoading,
-    isError: query.isError,
-    error: query.error,
-    refetch: query.refetch,
-  };
-=======
-      // 将新消息添加到第一页的开头（最新位置）
-      const newPages = [...oldData.pages];
-      
-      if (newPages.length > 0) {
-        newPages[0] = {
-          ...newPages[0],
-          messages: [newMessage, ...newPages[0].messages],
-        };
-      } else {
-        // 如果没有页面，创建第一页
-        newPages.push({
-          messages: [newMessage],
-          nextCursor: null,
-          hasMore: false,
-        });
-      }
+    // 将新消息添加到第一页的开头（最新位置）
+    const newPages = [...oldData.pages];
 
-      return {
-        ...oldData,
-        pages: newPages,
+    if (newPages.length > 0) {
+      newPages[0] = {
+        ...newPages[0],
+        messages: [newMessage, ...newPages[0].messages],
       };
+    } else {
+      // 如果没有页面，创建第一页
+      newPages.push({
+        messages: [newMessage],
+        nextCursor: null,
+        hasMore: false,
+      });
     }
-  );
->>>>>>> Remote
+
+    return {
+      ...oldData,
+      pages: newPages,
+    };
+  });
 }
 
 /**
@@ -103,24 +87,21 @@ export function replaceMessageInCache(
   tempId: string,
   realMessage: MessageWithSender
 ) {
-  queryClient.setQueryData(
-    ["messages", chatId],
-    (oldData: any) => {
-      if (!oldData) return oldData;
+  queryClient.setQueryData(["messages", chatId], (oldData: any) => {
+    if (!oldData) return oldData;
 
-      const newPages = oldData.pages.map((page: any) => ({
-        ...page,
-        messages: page.messages.map((msg: any) =>
-          msg.tempId === tempId ? realMessage : msg
-        ),
-      }));
+    const newPages = oldData.pages.map((page: any) => ({
+      ...page,
+      messages: page.messages.map((msg: any) =>
+        msg.tempId === tempId ? realMessage : msg
+      ),
+    }));
 
-      return {
-        ...oldData,
-        pages: newPages,
-      };
-    }
-  );
+    return {
+      ...oldData,
+      pages: newPages,
+    };
+  });
 }
 
 /**
@@ -131,22 +112,19 @@ export function markMessageAsReadInCache(
   chatId: string,
   messageId: string
 ) {
-  queryClient.setQueryData(
-    ["messages", chatId],
-    (oldData: any) => {
-      if (!oldData) return oldData;
+  queryClient.setQueryData(["messages", chatId], (oldData: any) => {
+    if (!oldData) return oldData;
 
-      const newPages = oldData.pages.map((page: any) => ({
-        ...page,
-        messages: page.messages.map((msg: MessageWithSender) =>
-          msg.id === messageId ? { ...msg, isRead: true } : msg
-        ),
-      }));
+    const newPages = oldData.pages.map((page: any) => ({
+      ...page,
+      messages: page.messages.map((msg: MessageWithSender) =>
+        msg.id === messageId ? { ...msg, isRead: true } : msg
+      ),
+    }));
 
-      return {
-        ...oldData,
-        pages: newPages,
-      };
-    }
-  );
+    return {
+      ...oldData,
+      pages: newPages,
+    };
+  });
 }

@@ -101,25 +101,25 @@ export function FriendRequestsDialog({
                   className="flex items-start space-x-3 p-3 border rounded-lg"
                 >
                   <Avatar className="h-10 w-10">
-                    <AvatarImage src={request.fromUser.image} />
+                    <AvatarImage src={request.fromUser?.image || undefined} />
                     <AvatarFallback>
-                      {request.fromUser.name.charAt(0)}
+                      {request.fromUser?.name?.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-2 mb-1">
                       <p className="font-medium text-sm">
-                        {request.fromUser.name}
+                        {request.fromUser?.name}
                       </p>
                       <Badge variant="secondary" className="text-xs">
                         <Clock className="h-3 w-3 mr-1" />
-                        {formatDate(request.createdAt)}
+                        {formatDate(request.createdAt.toString())}
                       </Badge>
                     </div>
 
                     <p className="text-xs text-muted-foreground mb-2">
-                      {request.fromUser.email}
+                      {request.fromUser?.email}
                     </p>
 
                     {request.message && (

@@ -89,7 +89,7 @@ export function useFileUpload({
 
       try {
         // 上传文件到OSS（后端会自动保存消息到数据库）
-        await uploadFileToOSS(file, type, currentUserId, chatId, (progress) => {
+        await uploadFileToOSS(file, type, chatId, (progress) => {
           // 只有小文件才使用 Axios 本地进度
           // 大文件的进度由 WebSocket 事件更新
           if (!isLargeFile) {

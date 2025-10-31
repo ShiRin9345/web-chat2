@@ -47,8 +47,11 @@ export const auth = betterAuth({
     expiresIn: 60 * 60 * 24 * 7, // 7 days
     updateAge: 60 * 60 * 24, // 1 day (every 1 day the session expiration is updated)
   },
-  trustedOrigins: ["http://localhost:3000"],
-  baseURL: "http://localhost:3001",
+  trustedOrigins: ["http://localhost:3000", "http://8.152.201.45"],
+  baseURL:
+    process.env.NODE_ENV === "production"
+      ? "http://8.152.201.45"
+      : "http://localhost:3001",
   secret:
     process.env.BETTER_AUTH_SECRET ||
     "your-super-secret-key-change-this-in-production",

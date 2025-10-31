@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { db, friendships, friendRequests, user } from "@workspace/database";
 import { eq, and, or, like, ne } from "drizzle-orm";
-import { authenticateUser } from "@/middleware/auth.ts";
-import { onlineUserService } from "@/services/onlineUsers.ts";
+import { authenticateUser } from "@/middleware/auth";
+import { onlineUserService } from "@/services/onlineUsers";
 const router = Router();
 
 // 通知好友关系建立后的在线状态

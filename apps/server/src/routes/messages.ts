@@ -3,7 +3,7 @@ import { db } from "@workspace/database";
 import {
   messages as messagesTable,
   user as userTable,
-} from "@workspace/database/schema";
+} from "@workspace/database";
 import { and, eq, or, lt, desc } from "drizzle-orm";
 import { authenticateUser } from "@/middleware/auth";
 

@@ -52,7 +52,17 @@ export function FriendInfoSheet({
   const handleCopyCode = async () => {
     if (friendCode) {
       try {
-        await navigator.clipboard.writeText(friendCode);
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(friendCode);
+        } else {
+          // 降级方案：使用传统的 document.execCommand
+          const textArea = document.createElement("textarea");
+          textArea.value = friendCode;
+          document.body.appendChild(textArea);
+          textArea.select();
+          document.execCommand("copy");
+          document.body.removeChild(textArea);
+        }
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       } catch (err) {

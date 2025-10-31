@@ -5,8 +5,7 @@ import {
 } from "@tanstack/react-query";
 import axios from "axios";
 import type { Message, User } from "@workspace/database";
-
-const API_BASE = "http://localhost:3001/api";
+import { API_BASE } from "@/lib/api-config";
 
 // 临时消息类型（与 MessageWithSender 兼容）
 export type TempMessage = MessageWithSender;

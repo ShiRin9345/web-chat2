@@ -9,7 +9,7 @@ interface UseChatInfoParams {
   chatId: string;
 }
 
-interface ChatInfo {
+export interface ChatInfo {
   type: "friend" | "group" | "unknown";
   id: string;
   name: string;

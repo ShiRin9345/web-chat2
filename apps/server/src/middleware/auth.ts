@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { auth } from "@/auth.ts";
+import { auth } from "@/auth";
 import { fromNodeHeaders } from "better-auth/node";
 
 // 扩展 Request 类型以包含用户信息

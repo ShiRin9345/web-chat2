@@ -1,8 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import axios from "axios";
 import type { User } from "@workspace/database";
-
-const API_BASE = "http://localhost:3001/api";
+import { API_BASE } from "@/lib/api-config";
 
 /**
  * 获取用户信息的查询配置

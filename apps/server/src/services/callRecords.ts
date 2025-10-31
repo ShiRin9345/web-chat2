@@ -1,5 +1,5 @@
 import { db } from "@workspace/database";
-import { callRecords, friendships } from "@workspace/database/schema";
+import { callRecords, friendships } from "@workspace/database";
 import { eq, and, or } from "drizzle-orm";
 
 export interface CreateCallRecordParams {

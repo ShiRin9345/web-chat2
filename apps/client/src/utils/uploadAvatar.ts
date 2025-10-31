@@ -1,11 +1,12 @@
 import { authClient } from "@/lib/auth-client";
 import OSS from "ali-oss";
 import axios from "axios";
+import { API_BASE } from "@/lib/api-config";
 
 async function getSTSToken() {
   try {
     const response = await axios.get(
-      "http://localhost:3001/api/oss/get_sts_token_for_oss_upload"
+      `${API_BASE}/oss/get_sts_token_for_oss_upload`
     );
 
     const credentials = response.data;

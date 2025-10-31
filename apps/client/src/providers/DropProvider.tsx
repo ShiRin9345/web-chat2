@@ -16,21 +16,10 @@ export const useDrop = () => useContext(DropContext);
 
 interface DropProviderProps {
   children: React.ReactNode;
-  chatId: string;
-  currentUserId: string;
-  currentUserName: string;
-  currentUserImage: string | null;
   uploadState: ReturnType<typeof useFileUpload>;
 }
 
-export function DropProvider({
-  children,
-  chatId,
-  currentUserId,
-  currentUserName,
-  currentUserImage,
-  uploadState,
-}: DropProviderProps) {
+export function DropProvider({ children, uploadState }: DropProviderProps) {
   // 使用传入的上传状态（后端会自动保存消息到数据库）
   const { handleFileUpload } = uploadState;
 

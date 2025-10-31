@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
 import { Loader2Icon } from "lucide-react";
+import { useEffect, useRef } from "react";
 
 interface LoadMoreTriggerProps {
   hasNextPage?: boolean;
@@ -20,7 +20,7 @@ export function LoadMoreTrigger({
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+        if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
           onLoadMore();
         }
       },

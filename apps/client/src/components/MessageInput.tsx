@@ -1,18 +1,17 @@
-import { useState, useRef } from "react";
-import type { KeyboardEvent, ChangeEvent } from "react";
 import { Button } from "@workspace/ui/components/button";
-import { Textarea } from "@workspace/ui/components/textarea";
 import { Kbd, KbdGroup } from "@workspace/ui/components/kbd";
-import { Send, Image as ImageIcon, Paperclip, X, Loader2 } from "lucide-react";
+import { Textarea } from "@workspace/ui/components/textarea";
 import { cn } from "@workspace/ui/lib/utils";
-import { formatFileSize } from "../utils/ossUpload";
+import { Image as ImageIcon, Loader2, Paperclip, Send, X } from "lucide-react";
+import type { ChangeEvent, KeyboardEvent } from "react";
+import { useRef, useState } from "react";
 import type { useFileUpload } from "../hooks/useFileUpload";
+import { formatFileSize } from "../utils/ossUpload";
 
 interface MessageInputProps {
   onSend: (content: string, type?: "text" | "image" | "file") => void;
   disabled?: boolean;
   placeholder?: string;
-  currentUserId: string;
   uploadState: ReturnType<typeof useFileUpload>;
 }
 
@@ -20,7 +19,6 @@ export function MessageInput({
   onSend,
   disabled = false,
   placeholder = "输入消息...",
-  currentUserId,
   uploadState,
 }: MessageInputProps) {
   const [content, setContent] = useState("");
@@ -31,12 +29,9 @@ export function MessageInput({
   const {
     uploading,
     uploadingType,
-    uploadProgress,
     uploadError,
-    currentFile,
     uploadQueue, // 上传队列
     handleFileUpload,
-    cancelUpload,
     clearError,
   } = uploadState;
 
@@ -99,8 +94,11 @@ export function MessageInput({
       {/* 上传队列显示 */}
       {uploadQueue && uploadQueue.length > 0 && (
         <div className="mb-3 space-y-2 max-h-40 overflow-y-auto">
-          {uploadQueue.map((item, index) => (
-            <div key={index} className="p-2 bg-muted rounded-lg">
+          {uploadQueue.map((item) => (
+            <div
+              key={`${item.file.name}-${item.file.size}-${item.file.lastModified}`}
+              className="p-2 bg-muted rounded-lg"
+            >
               <div className="flex items-center justify-between mb-1">
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium truncate">

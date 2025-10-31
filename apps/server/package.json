@@ -6,7 +6,8 @@
   "main": "index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "esbuild src/index.ts --bundle --outfile=dist/index.js --platform=node --target=node22 --preserve-symlinks --external:proxy-agent --external:pg-native --external:@swc/core",
+    "build:test": "esbuild src/index.js --bundle --outfile=dist/index.js --platform=node --target=node22 --preserve-symlinks --external:proxy-agent --external:pg-native --external:@swc/core",
     "start": "node dist/index.js",
     "db:generate": "pnpm --filter @workspace/database db:generate",
     "db:migrate": "pnpm --filter @workspace/database db:migrate",
@@ -39,6 +40,7 @@
     "@types/pg": "^8.15.5",
     "@workspace/typescript-config": "workspace:*",
     "drizzle-kit": "^0.31.5",
+    "esbuild": "^0.25.11",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   }

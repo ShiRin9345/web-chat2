@@ -1,8 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import type { User, FriendRequest } from "@workspace/database";
-
-const API_BASE = "http://localhost:3001/api";
+import { API_BASE } from "@/lib/api-config";
 
 // 获取好友列表
 export function useFriends() {

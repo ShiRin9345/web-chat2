@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { getCallHistory } from "@/services/callRecords.ts";
-import { authenticateUser } from "@/middleware/auth.ts";
+import { getCallHistory } from "@/services/callRecords";
+import { authenticateUser } from "@/middleware/auth";
 
 export const callsRouter = Router();
 

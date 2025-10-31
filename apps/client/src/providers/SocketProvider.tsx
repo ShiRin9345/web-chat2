@@ -1,6 +1,14 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useRef,
+} from "react";
 import { socket } from "@/lib/socket";
 import { authClient } from "@/lib/auth-client";
+import { useConversationsStore } from "@/stores/conversations";
+import type { MessageWithSender } from "@/queries/messages";
 
 interface SocketContextType {
   isConnected: boolean;
@@ -14,8 +22,12 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   const [isConnected, setIsConnected] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
 
+  const currentUserIdRef = useRef<string>("");
+
   useEffect(() => {
     if (!session?.user) return;
+
+    currentUserIdRef.current = session.user.id;
 
     // 连接 socket
     socket.connect();
@@ -49,11 +61,18 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       setIsConnected(false);
     };
 
+    // 监听新消息（全局处理，无论用户在哪个路由）
+    const handleNewMessageGlobal = (message: MessageWithSender) => {
+      const store = useConversationsStore.getState();
+      store.handleNewMessage(message, currentUserIdRef.current);
+    };
+
     // 注册事件监听器
     socket.on("friend:online", handleFriendOnline);
     socket.on("friend:offline", handleFriendOffline);
     socket.on("connect", handleConnect);
     socket.on("disconnect", handleDisconnect);
+    socket.on("message:new", handleNewMessageGlobal);
 
     // 初始化在线好友列表
     socket.emit("user:get-online-friends", (onlineFriendIds: string[]) => {
@@ -66,6 +85,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       socket.off("friend:offline", handleFriendOffline);
       socket.off("connect", handleConnect);
       socket.off("disconnect", handleDisconnect);
+      socket.off("message:new", handleNewMessageGlobal);
       socket.disconnect();
       setIsConnected(false);
     };

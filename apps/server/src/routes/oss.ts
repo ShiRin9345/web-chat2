@@ -1,16 +1,16 @@
 import express from "express";
 import OSS from "ali-oss";
 import { config } from "dotenv";
-import { authenticateUser } from "@/middleware/auth.ts";
+import { authenticateUser } from "@/middleware/auth";
 import multer from "multer";
 import { randomBytes } from "crypto";
-import { io } from "@/index.ts";
-import { onlineUserService } from "@/services/onlineUsers.ts";
+import { io } from "@/index";
+import { onlineUserService } from "@/services/onlineUsers";
 import { db } from "@workspace/database";
 import {
   messages as messagesTable,
   user as userTable,
-} from "@workspace/database/schema";
+} from "@workspace/database";
 import { eq } from "drizzle-orm";
 
 config({ path: ".env.local" });
@@ -269,9 +269,14 @@ ossRouter.post(
           }
         }
 
-        const senderSocketIdForText = onlineUserService.getSocketId(req.user!.id);
+        const senderSocketIdForText = onlineUserService.getSocketId(
+          req.user!.id
+        );
         if (senderSocketIdForText) {
-          io.to(senderSocketIdForText).emit("message:new", textMessageWithSender);
+          io.to(senderSocketIdForText).emit(
+            "message:new",
+            textMessageWithSender
+          );
         }
       }
 
@@ -459,9 +464,14 @@ ossRouter.post(
           }
         }
 
-        const senderSocketIdForText = onlineUserService.getSocketId(req.user!.id);
+        const senderSocketIdForText = onlineUserService.getSocketId(
+          req.user!.id
+        );
         if (senderSocketIdForText) {
-          io.to(senderSocketIdForText).emit("message:new", textMessageWithSender);
+          io.to(senderSocketIdForText).emit(
+            "message:new",
+            textMessageWithSender
+          );
         }
       }
 

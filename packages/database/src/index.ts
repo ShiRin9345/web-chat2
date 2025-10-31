@@ -1,2 +1,2 @@
-export * from "./db/schema.ts";
-export * from "./db/index.ts";
+export * from "./db/schema";
+export * from "./db/index";

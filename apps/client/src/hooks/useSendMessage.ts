@@ -40,6 +40,8 @@ export function useSendMessage(
           id: currentUserId,
           name: currentUserName,
           image: currentUserImage,
+          email: "", // 临时消息不需要 email
+          code: null, // 临时消息不需要 code
         },
       };
 

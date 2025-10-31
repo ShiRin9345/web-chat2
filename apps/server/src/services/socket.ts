@@ -1,17 +1,17 @@
 import { Server, Socket } from "socket.io";
-import { onlineUserService } from "./onlineUsers.ts";
-import { getUserFriendIds } from "../routes/friends.js";
+import { onlineUserService } from "./onlineUsers";
+import { getUserFriendIds } from "../routes/friends";
 import {
   createCallRecord,
   updateCallRecord,
   validateFriendship,
-} from "./callRecords.js";
+} from "./callRecords";
 import { db } from "@workspace/database";
 import {
   messages as messagesTable,
   user as userTable,
   groupMembers,
-} from "@workspace/database/schema";
+} from "@workspace/database";
 import { eq } from "drizzle-orm";
 
 export class SocketService {

@@ -1,6 +1,5 @@
 import axios from "axios";
-
-const API_BASE = "http://localhost:3001/api";
+import { API_BASE } from "@/lib/api-config";
 
 // 文件大小限制 (字节)
 const MAX_IMAGE_SIZE = 20 * 1024 * 1024; // 20MB
@@ -62,7 +61,6 @@ export function validateFile(
 export async function uploadFileToOSS(
   file: File,
   fileType: "image" | "file",
-  userId: string,
   chatId: string,
   onProgress?: (progress: number) => void
 ): Promise<string> {
