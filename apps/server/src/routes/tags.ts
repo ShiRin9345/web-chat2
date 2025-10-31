@@ -1,5 +1,6 @@
 import express from "express";
 import { tagService, TagValidationError } from "../services/tags.js";
+import { authenticateUser } from "@/middleware/auth";
 
 const router = express.Router();
 
@@ -7,7 +8,7 @@ const router = express.Router();
  * GET /api/users/profile/tags
  * 获取当前用户的标签
  */
-router.get("/users/profile/tags", async (req, res) => {
+router.get("/users/profile/tags", authenticateUser, async (req, res) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
@@ -37,7 +38,7 @@ router.get("/users/profile/tags", async (req, res) => {
  * PUT /api/users/profile/tags
  * 更新当前用户的标签
  */
-router.put("/users/profile/tags", async (req, res) => {
+router.put("/users/profile/tags", authenticateUser, async (req, res) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
@@ -75,7 +76,7 @@ router.put("/users/profile/tags", async (req, res) => {
  * GET /api/tags/predefined
  * 获取预定义标签列表
  */
-router.get("/tags/predefined", async (req, res) => {
+router.get("/tags/predefined", authenticateUser, async (req, res) => {
   try {
     const category = req.query.category as string | undefined;
 

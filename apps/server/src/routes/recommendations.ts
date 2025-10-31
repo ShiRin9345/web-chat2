@@ -1,5 +1,6 @@
 import express from "express";
 import { recommendationService } from "../services/recommendations.js";
+import { authenticateUser } from "@/middleware/auth";
 
 const router = express.Router();
 
@@ -9,7 +10,7 @@ const router = express.Router();
  * Query params:
  *  - limit: 返回数量限制 (默认5, 最大10)
  */
-router.get("/recommendations/friends", async (req, res) => {
+router.get("/recommendations/friends", authenticateUser, async (req, res) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
@@ -47,7 +48,7 @@ router.get("/recommendations/friends", async (req, res) => {
  * POST /api/recommendations/refresh
  * 刷新推荐缓存 (当前实现为实时计算,此接口预留)
  */
-router.post("/recommendations/refresh", async (req, res) => {
+router.post("/recommendations/refresh", authenticateUser, async (req, res) => {
   try {
     const userId = req.user?.id;
     if (!userId) {

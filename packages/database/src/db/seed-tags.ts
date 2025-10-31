@@ -1,5 +1,20 @@
 import { db } from "./index.js";
 import { predefinedTags } from "./schema.js";
+import { config } from "dotenv";
+import { fileURLToPath } from "url";
+import { dirname, resolve } from "path";
+
+// 加载环境变量 - 从项目根目录加载 .env.local
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+// 尝试从多个可能的位置加载环境变量
+const envPaths = [
+  resolve(__dirname, "../../../.env.local"), // 项目根目录
+  resolve(__dirname, "../../.env.local"), // packages/database 目录
+];
+for (const envPath of envPaths) {
+  config({ path: envPath });
+}
 
 const tagCategories = [
   {
@@ -135,24 +150,54 @@ const tagCategories = [
 async function seedTags() {
   console.log("开始插入预定义标签...");
 
-  try {
-    // 清空现有预定义标签(可选)
-    // await db.delete(predefinedTags);
+  if (!process.env.DATABASE_URL) {
+    throw new Error("DATABASE_URL 环境变量未设置");
+  }
 
-    // 批量插入标签
+  try {
+    let insertedCount = 0;
+    let skippedCount = 0;
+
+    // 批量插入标签，使用 ON CONFLICT 处理重复
     for (const categoryData of tagCategories) {
       for (const tag of categoryData.tags) {
-        await db.insert(predefinedTags).values({
-          category: categoryData.category,
-          name: tag.name,
-          displayName: tag.displayName,
-          description: `${categoryData.displayCategory} - ${tag.displayName}`,
-          usageCount: 0,
-        });
+        try {
+          await db
+            .insert(predefinedTags)
+            .values({
+              category: categoryData.category,
+              name: tag.name,
+              displayName: tag.displayName,
+              description: `${categoryData.displayCategory} - ${tag.displayName}`,
+              usageCount: 0,
+            })
+            .onConflictDoUpdate({
+              target: predefinedTags.name,
+              set: {
+                displayName: tag.displayName,
+                description: `${categoryData.displayCategory} - ${tag.displayName}`,
+              },
+            });
+          insertedCount++;
+        } catch (error: any) {
+          // 如果是唯一约束冲突，跳过
+          if (error.code === "23505" || error.message?.includes("unique")) {
+            skippedCount++;
+            console.log(`跳过已存在的标签: ${tag.name}`);
+          } else {
+            throw error;
+          }
+        }
       }
     }
 
-    console.log(`成功插入 ${tagCategories.reduce((sum, cat) => sum + cat.tags.length, 0)} 个预定义标签`);
+    const totalTags = tagCategories.reduce(
+      (sum, cat) => sum + cat.tags.length,
+      0
+    );
+    console.log(
+      `成功插入 ${insertedCount} 个预定义标签，跳过 ${skippedCount} 个已存在的标签（总计 ${totalTags} 个）`
+    );
   } catch (error) {
     console.error("插入标签失败:", error);
     throw error;
