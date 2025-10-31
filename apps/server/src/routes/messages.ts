@@ -3,8 +3,9 @@ import { db } from "@workspace/database";
 import {
   messages as messagesTable,
   user as userTable,
+  unreadMessages as unreadMessagesTable,
 } from "@workspace/database";
-import { and, eq, or, lt, desc } from "drizzle-orm";
+import { and, eq, or, lt, desc, sql } from "drizzle-orm";
 import { authenticateUser } from "@/middleware/auth";
 
 export const messagesRouter = Router();
@@ -253,3 +254,163 @@ messagesRouter.post("/read-batch", authenticateUser, async (req, res) => {
     res.status(500).json({ error: "批量标记消息已读失败" });
   }
 });
+
+// ========== 离线消息未读计数相关API ==========
+
+// 获取用户的所有未读计数
+messagesRouter.get("/unread-summary", authenticateUser, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: "未授权" });
+    }
+
+    const unreadData = await db
+      .select()
+      .from(unreadMessagesTable)
+      .where(eq(unreadMessagesTable.userId, userId));
+
+    // 转换为前端格式：{ "friend-123": 5, "group-456": 2 }
+    const unreadCounts: Record<string, number> = {};
+    for (const item of unreadData) {
+      const convId = item.groupId
+        ? `group-${item.groupId}`
+        : `friend-${item.senderId}`;
+      unreadCounts[convId] = item.unreadCount;
+    }
+
+    res.json(unreadCounts);
+  } catch (error) {
+    console.error("获取未读计数失败:", error);
+    res.status(500).json({ error: "获取未读计数失败" });
+  }
+});
+
+// 同步未读计数到服务器（前端定期调用）
+messagesRouter.post("/unread-counts", authenticateUser, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: "未授权" });
+    }
+
+    const { unreadCounts } = req.body;
+    if (!unreadCounts || typeof unreadCounts !== "object") {
+      return res.status(400).json({ error: "unreadCounts 参数必填" });
+    }
+
+    // 更新未读计数到数据库
+    for (const [convId, count] of Object.entries(unreadCounts)) {
+      const isFriendChat = convId.startsWith("friend-");
+      const senderId = isFriendChat ? convId.replace("friend-", "") : null;
+      const groupId = !isFriendChat ? convId.replace("group-", "") : null;
+
+      if (count === 0) {
+        // 删除已读的会话记录
+        await db
+          .delete(unreadMessagesTable)
+          .where(
+            and(
+              eq(unreadMessagesTable.userId, userId),
+              isFriendChat
+                ? eq(unreadMessagesTable.senderId, senderId!)
+                : eq(unreadMessagesTable.groupId, groupId!)
+            )
+          );
+      } else {
+        // 更新或创建未读计数
+        const existing = await db
+          .select()
+          .from(unreadMessagesTable)
+          .where(
+            and(
+              eq(unreadMessagesTable.userId, userId),
+              isFriendChat
+                ? eq(unreadMessagesTable.senderId, senderId!)
+                : eq(unreadMessagesTable.groupId, groupId!)
+            )
+          )
+          .limit(1);
+
+        if (existing.length > 0) {
+          await db
+            .update(unreadMessagesTable)
+            .set({
+              unreadCount: count as number,
+              updatedAt: new Date(),
+            })
+            .where(
+              and(
+                eq(unreadMessagesTable.userId, userId),
+                isFriendChat
+                  ? eq(unreadMessagesTable.senderId, senderId!)
+                  : eq(unreadMessagesTable.groupId, groupId!)
+              )
+            );
+        } else {
+          await db.insert(unreadMessagesTable).values({
+            userId,
+            senderId: isFriendChat ? senderId : null,
+            groupId: !isFriendChat ? groupId : null,
+            unreadCount: count as number,
+          });
+        }
+      }
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("同步未读计数失败:", error);
+    res.status(500).json({ error: "同步未读计数失败" });
+  }
+});
+
+// 清除某个会话的未读计数
+messagesRouter.post(
+  "/conversations/:conversationId/mark-read",
+  authenticateUser,
+  async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "未授权" });
+      }
+
+      const { conversationId } = req.params;
+      const isFriendChat = conversationId.startsWith("friend-");
+      const id = isFriendChat
+        ? conversationId.replace("friend-", "")
+        : conversationId.replace("group-", "");
+
+      // 删除或清零该会话的未读计数
+      await db
+        .delete(unreadMessagesTable)
+        .where(
+          and(
+            eq(unreadMessagesTable.userId, userId),
+            isFriendChat
+              ? eq(unreadMessagesTable.senderId, id)
+              : eq(unreadMessagesTable.groupId, id)
+          )
+        );
+
+      // 同时标记消息表中的消息为已读
+      if (isFriendChat) {
+        await db
+          .update(messagesTable)
+          .set({ isRead: true })
+          .where(
+            and(
+              eq(messagesTable.senderId, id),
+              eq(messagesTable.recipientId, userId)
+            )
+          );
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("清除未读计数失败:", error);
+      res.status(500).json({ error: "清除未读计数失败" });
+    }
+  }
+);

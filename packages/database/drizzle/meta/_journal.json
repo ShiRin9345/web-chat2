@@ -36,6 +36,13 @@
       "when": 1761391909838,
       "tag": "0004_hard_norrin_radd",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1761889527421,
+      "tag": "0005_gigantic_ma_gnuci",
+      "breakpoints": true
     }
   ]
 }

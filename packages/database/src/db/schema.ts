@@ -154,6 +154,27 @@ export const callRecords = pgTable("call_record", {
     .notNull(),
 });
 
+// 未读消息计数表（用于离线消息计数）
+export const unreadMessages = pgTable("unread_message", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }), // 接收者ID
+  senderId: text("sender_id").references(() => user.id, {
+    onDelete: "cascade",
+  }), // 发送者ID（一对一聊天）
+  groupId: uuid("group_id").references(() => groups.id, {
+    onDelete: "cascade",
+  }), // 群组ID（群聊）
+  unreadCount: integer("unread_count").default(0).notNull(),
+  lastMessageTime: timestamp("last_message_time"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .notNull(),
+});
+
 export type User = typeof user.$inferSelect;
 export type Session = typeof session.$inferSelect;
 export type Account = typeof account.$inferSelect;
@@ -164,3 +185,4 @@ export type GroupMember = typeof groupMembers.$inferSelect;
 export type Message = typeof messages.$inferSelect;
 export type FriendRequest = typeof friendRequests.$inferSelect;
 export type CallRecord = typeof callRecords.$inferSelect;
+export type UnreadMessage = typeof unreadMessages.$inferSelect;

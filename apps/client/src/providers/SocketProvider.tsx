@@ -54,6 +54,9 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     const handleConnect = () => {
       console.log("Socket 连接成功");
       setIsConnected(true);
+      // 连接成功时，从服务器恢复离线未读计数
+      const store = useConversationsStore.getState();
+      store.restoreUnreadCountsFromServer();
     };
 
     const handleDisconnect = () => {

@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 import type { User, Group } from "@workspace/database";
 import type { MessageWithSender } from "@/queries/messages";
 import { formatTimeAgo } from "@/utils/time";
+import { API_BASE } from "@/lib/api-config";
 
 export interface Conversation {
   id: string;
@@ -35,6 +36,8 @@ interface ConversationsState {
   onlineStatus: Record<string, boolean>;
   // 未读计数快照（用于在synchronizeConversations中保留）
   unreadCountSnapshot: Record<string, number>;
+  // 离线未读计数（从服务器同步的）
+  offlineUnreadCounts: Record<string, number>;
 
   // 设置当前打开的聊天ID
   setCurrentChatId: (chatId: string | null) => void;
@@ -71,6 +74,15 @@ interface ConversationsState {
   // 更新未读计数快照
   updateUnreadCountSnapshot: () => void;
 
+  // 从服务器恢复未读计数
+  restoreUnreadCountsFromServer: () => Promise<void>;
+
+  // 同步未读计数到服务器
+  syncUnreadCountsToServer: () => Promise<void>;
+
+  // 更新离线未读计数
+  updateOfflineUnreadCounts: (counts: Record<string, number>) => void;
+
   // 综合更新方法：处理会话映射、列表生成和排序
   synchronizeConversations: (
     friends: User[] | undefined,
@@ -97,6 +109,7 @@ export const useConversationsStore = create<ConversationsState>()(
       isLoadingConversations: false,
       onlineStatus: {},
       unreadCountSnapshot: {},
+      offlineUnreadCounts: {},
 
       setCurrentChatId: (chatId: string | null) =>
         set({ currentChatId: chatId }),
@@ -298,6 +311,85 @@ export const useConversationsStore = create<ConversationsState>()(
           get();
         return isLoadingFriends || isLoadingGroups || isLoadingConversations;
       },
+
+      // 从服务器恢复离线未读计数
+      restoreUnreadCountsFromServer: async () => {
+        try {
+          console.log(
+            "[Store] Restoring unread counts from:",
+            `${API_BASE}/messages/unread-summary`
+          );
+          const response = await fetch(`${API_BASE}/messages/unread-summary`, {
+            credentials: "include",
+          });
+          const offlineUnreadCounts = await response.json();
+
+          set((state) => {
+            // 合并离线未读计数和本地计数，优先使用服务器数据
+            const mergedConversations = state.conversations.map((conv) => ({
+              ...conv,
+              unreadCount: offlineUnreadCounts[conv.id] ?? conv.unreadCount,
+            }));
+
+            return {
+              offlineUnreadCounts,
+              conversations: mergedConversations,
+              unreadCountSnapshot: mergedConversations.reduce(
+                (acc, conv) => ({
+                  ...acc,
+                  [conv.id]: conv.unreadCount,
+                }),
+                {}
+              ),
+            };
+          });
+
+          console.log(
+            "[Zustand] Offline unread counts restored:",
+            offlineUnreadCounts
+          );
+        } catch (error) {
+          console.error("Failed to restore offline unread counts:", error);
+        }
+      },
+
+      // 同步未读计数到服务器（定期调用）
+      syncUnreadCountsToServer: async () => {
+        try {
+          const { unreadCountSnapshot } = get();
+          await fetch(`${API_BASE}/messages/unread-counts`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ unreadCounts: unreadCountSnapshot }),
+            credentials: "include",
+          });
+          console.log("[Zustand] Unread counts synced to server");
+        } catch (error) {
+          console.error("Failed to sync unread counts:", error);
+        }
+      },
+
+      // 更新离线未读计数
+      updateOfflineUnreadCounts: (counts: Record<string, number>) =>
+        set((state) => {
+          // 更新conversations中的unreadCount
+          const mergedConversations = state.conversations.map((conv) => ({
+            ...conv,
+            unreadCount: counts[conv.id] ?? conv.unreadCount,
+          }));
+
+          return {
+            offlineUnreadCounts: counts,
+            conversations: mergedConversations,
+            unreadCountSnapshot: mergedConversations.reduce(
+              (acc, conv) => ({
+                ...acc,
+                [conv.id]: conv.unreadCount,
+              }),
+              {}
+            ),
+          };
+        }),
 
       getFilteredConversations: () => {
         const { conversations, searchQuery } = get();

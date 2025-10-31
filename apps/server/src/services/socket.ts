@@ -11,8 +11,9 @@ import {
   messages as messagesTable,
   user as userTable,
   groupMembers,
+  unreadMessages as unreadMessagesTable,
 } from "@workspace/database";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 export class SocketService {
   private io: Server;
@@ -172,10 +173,52 @@ export class SocketService {
         tempId: data.tempId, // 保留临时ID用于客户端替换
       };
 
-      // 推送给接收者
-      this.io
-        .to(`user:${data.recipientId}`)
-        .emit("message:new", messageWithSender);
+      // 检查接收者是否在线
+      const recipientSocketId = onlineUserService.getSocketId(data.recipientId);
+      if (!recipientSocketId) {
+        // 接收者离线，更新未读计数
+        const existing = await db
+          .select()
+          .from(unreadMessagesTable)
+          .where(
+            and(
+              eq(unreadMessagesTable.userId, data.recipientId),
+              eq(unreadMessagesTable.senderId, senderId)
+            )
+          )
+          .limit(1);
+
+        if (existing.length > 0) {
+          // 更新现有记录
+          await db
+            .update(unreadMessagesTable)
+            .set({
+              unreadCount: existing[0].unreadCount + 1,
+              lastMessageTime: newMessage.createdAt,
+              updatedAt: new Date(),
+            })
+            .where(
+              and(
+                eq(unreadMessagesTable.userId, data.recipientId),
+                eq(unreadMessagesTable.senderId, senderId)
+              )
+            );
+        } else {
+          // 创建新记录
+          await db.insert(unreadMessagesTable).values({
+            userId: data.recipientId,
+            senderId,
+            unreadCount: 1,
+            lastMessageTime: newMessage.createdAt,
+          });
+        }
+        console.log(`用户 ${data.recipientId} 离线，已记录未读计数`);
+      } else {
+        // 接收者在线，直接推送消息
+        this.io
+          .to(`user:${data.recipientId}`)
+          .emit("message:new", messageWithSender);
+      }
 
       // 也推送给发送者（用于多设备同步）
       socket.emit("message:new", messageWithSender);

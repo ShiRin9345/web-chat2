@@ -60,12 +60,9 @@ function MessagesLayout() {
 
     if (chatId) {
       setCurrentChatId(chatId);
-      // 打开聊天页面时，清除该会话的未读计数
       clearUnreadCount(chatId);
-      // 更新快照，确保未读计数被持久化
       updateUnreadCountSnapshot();
     } else {
-      // 回到消息列表页面时，清除currentChatId
       setCurrentChatId(null);
     }
   }, [
@@ -75,13 +72,9 @@ function MessagesLayout() {
     updateUnreadCountSnapshot,
   ]);
 
-  // 同步会话数据（包括映射、列表生成、排序等）
-  // ✅ 改进：在同步前保存当前未读计数，在同步后恢复
   useEffect(() => {
-    // 关键改进：先保存快照再同步，确保未读计数不会被覆盖
     if (friends && groups) {
       synchronizeConversations(friends, groups, conversationsData);
-      // 同步完成后立即更新快照，保证快照始终最新
       updateUnreadCountSnapshot();
     }
   }, [

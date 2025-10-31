@@ -6,6 +6,7 @@ import {
   SidebarContent,
 } from "@workspace/ui/components/sidebar";
 import { SocketProvider } from "@/providers/SocketProvider";
+import { useInitializeOfflineUnreads } from "@/hooks/useInitializeOfflineUnreads";
 import {
   Avatar,
   AvatarFallback,
@@ -33,6 +34,9 @@ export const Route = createFileRoute("/_authenticated")({
 function AuthenticatedLayout() {
   const navigate = useNavigate();
   const { data: session, isPending } = authClient.useSession();
+
+  // 初始化离线未读计数
+  useInitializeOfflineUnreads();
 
   // 在组件内部处理认证状态
   useEffect(() => {
