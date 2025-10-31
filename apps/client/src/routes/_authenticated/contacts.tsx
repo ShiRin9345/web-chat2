@@ -6,9 +6,11 @@ import {
   ResizableHandle,
 } from "@workspace/ui/components/resizable";
 import { ScrollArea } from "@workspace/ui/components/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@workspace/ui/components/tabs";
 import { ContactHeader } from "@/components/ContactHeader";
 import { ContactFriends } from "@/components/ContactFriends";
 import { ContactGroups } from "@/components/ContactGroups";
+import { ContactRecommendations } from "@/components/ContactRecommendations";
 import { ContactDetailsPlaceholder } from "@/components/ContactDetailsPlaceholder";
 import { useFriends } from "@/queries/friends";
 import { useGroups } from "@/queries/groups";
@@ -22,6 +24,9 @@ function ContactsPage() {
   const { data: contacts, isLoading: isLoadingFriends } = useFriends();
   const { data: groups, isLoading: isLoadingGroups } = useGroups();
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState<"contacts" | "recommendations">(
+    "contacts"
+  );
 
   // 处理点击好友
   const handleContactClick = (contactId: string) => {
@@ -47,28 +52,49 @@ function ContactsPage() {
             <div className="p-4 h-full">
               <h2 className="text-lg font-semibold mb-4">联系人</h2>
               <div className="h-full flex flex-col gap-2">
-                <ContactHeader
-                  searchQuery={searchQuery}
-                  onSearchChange={setSearchQuery}
-                />
+                <Tabs
+                  value={activeTab}
+                  onValueChange={(v) => setActiveTab(v as any)}
+                  className="flex-1 flex flex-col"
+                >
+                  <TabsList className="grid w-full grid-cols-2 mb-2">
+                    <TabsTrigger value="contacts">好友与群组</TabsTrigger>
+                    <TabsTrigger value="recommendations">推荐</TabsTrigger>
+                  </TabsList>
 
-                <ScrollArea className="flex-1">
-                  <div className="p-2 space-y-6">
-                    <ContactFriends
-                      contacts={contacts}
-                      isLoading={isLoadingFriends}
-                      onContactClick={handleContactClick}
+                  <TabsContent value="contacts" className="flex-1 flex flex-col mt-0">
+                    <ContactHeader
                       searchQuery={searchQuery}
+                      onSearchChange={setSearchQuery}
                     />
 
-                    <ContactGroups
-                      groups={groups}
-                      isLoading={isLoadingGroups}
-                      onGroupClick={handleGroupClick}
-                      searchQuery={searchQuery}
-                    />
-                  </div>
-                </ScrollArea>
+                    <ScrollArea className="flex-1 mt-2">
+                      <div className="p-2 space-y-6">
+                        <ContactFriends
+                          contacts={contacts}
+                          isLoading={isLoadingFriends}
+                          onContactClick={handleContactClick}
+                          searchQuery={searchQuery}
+                        />
+
+                        <ContactGroups
+                          groups={groups}
+                          isLoading={isLoadingGroups}
+                          onGroupClick={handleGroupClick}
+                          searchQuery={searchQuery}
+                        />
+                      </div>
+                    </ScrollArea>
+                  </TabsContent>
+
+                  <TabsContent value="recommendations" className="flex-1 mt-0">
+                    <ScrollArea className="h-full">
+                      <div className="p-2">
+                        <ContactRecommendations />
+                      </div>
+                    </ScrollArea>
+                  </TabsContent>
+                </Tabs>
               </div>
             </div>
           </div>

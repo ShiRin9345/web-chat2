@@ -43,6 +43,13 @@
       "when": 1761889527421,
       "tag": "0005_gigantic_ma_gnuci",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1761896916056,
+      "tag": "0006_jazzy_gorgon",
+      "breakpoints": true
     }
   ]
 }

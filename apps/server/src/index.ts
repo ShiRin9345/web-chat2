@@ -10,7 +10,10 @@ import { friendsRouter } from "@/routes/friends";
 import { groupsRouter } from "@/routes/groups";
 import { callsRouter } from "@/routes/calls";
 import { messagesRouter } from "@/routes/messages";
+import tagsRouter from "@/routes/tags";
+import recommendationsRouter from "@/routes/recommendations";
 import { SocketService } from "@/services/socket";
+import { embeddingService } from "@/services/embedding";
 config({ path: ".env.local" });
 
 const app = express();
@@ -46,12 +49,25 @@ app.use("/api/friends", friendsRouter);
 app.use("/api/groups", groupsRouter);
 app.use("/api/calls", callsRouter);
 app.use("/api/messages", messagesRouter);
+app.use("/api", tagsRouter);
+app.use("/api", recommendationsRouter);
 
 app.get("/check", (_req, res) => {
   res.send("Hello World");
 });
 
 new SocketService(io);
+
+// 初始化 ChromaDB
+embeddingService
+  .initialize()
+  .then(() => {
+    console.log("ChromaDB 初始化成功");
+  })
+  .catch((error) => {
+    console.error("ChromaDB 初始化失败:", error);
+    console.warn("推荐功能将不可用");
+  });
 
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

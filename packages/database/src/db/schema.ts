@@ -154,7 +154,7 @@ export const callRecords = pgTable("call_record", {
     .notNull(),
 });
 
-// 未读消息计数表（用于离线消息计数）
+// 未读消息计数表(用于离线消息计数)
 export const unreadMessages = pgTable("unread_message", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id")
@@ -162,10 +162,10 @@ export const unreadMessages = pgTable("unread_message", {
     .references(() => user.id, { onDelete: "cascade" }), // 接收者ID
   senderId: text("sender_id").references(() => user.id, {
     onDelete: "cascade",
-  }), // 发送者ID（一对一聊天）
+  }), // 发送者ID(一对一聊天)
   groupId: uuid("group_id").references(() => groups.id, {
     onDelete: "cascade",
-  }), // 群组ID（群聊）
+  }), // 群组ID(群聊)
   unreadCount: integer("unread_count").default(0).notNull(),
   lastMessageTime: timestamp("last_message_time"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -173,6 +173,32 @@ export const unreadMessages = pgTable("unread_message", {
     .defaultNow()
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
+});
+
+// 用户标签表
+export const userTags = pgTable("user_tags", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .unique()
+    .references(() => user.id, { onDelete: "cascade" }),
+  tags: text("tags").array().notNull(), // 标签数组,最多8个
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .notNull(),
+});
+
+// 预定义标签表
+export const predefinedTags = pgTable("predefined_tags", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  category: text("category").notNull(), // 标签分类
+  name: text("name").notNull().unique(), // 标签名称
+  displayName: text("display_name").notNull(), // 显示名称
+  description: text("description"), // 标签描述
+  usageCount: integer("usage_count").default(0).notNull(), // 使用次数
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export type User = typeof user.$inferSelect;
@@ -186,3 +212,5 @@ export type Message = typeof messages.$inferSelect;
 export type FriendRequest = typeof friendRequests.$inferSelect;
 export type CallRecord = typeof callRecords.$inferSelect;
 export type UnreadMessage = typeof unreadMessages.$inferSelect;
+export type UserTag = typeof userTags.$inferSelect;
+export type PredefinedTag = typeof predefinedTags.$inferSelect;
