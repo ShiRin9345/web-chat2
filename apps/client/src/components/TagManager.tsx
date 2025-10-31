@@ -1,11 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
 import { ScrollArea } from "@workspace/ui/components/scroll-area";
 import { X, Plus, Save, Loader2 } from "lucide-react";
-import { usePredefinedTags } from "@/queries/tags";
+import {
+  loadPredefinedTags,
+  type PredefinedTagCategory,
+} from "@/data/predefinedTags";
 import { cn } from "@workspace/ui/lib/utils";
 
 interface TagManagerProps {
@@ -22,7 +25,33 @@ export function TagManager({
   isSaving = false,
 }: TagManagerProps) {
   const [customTagInput, setCustomTagInput] = useState("");
-  const { data: predefinedData, isLoading } = usePredefinedTags();
+  const [predefinedCategories, setPredefinedCategories] = useState<
+    PredefinedTagCategory[]
+  >([]);
+  const [isLoadingTags, setIsLoadingTags] = useState(true);
+
+  // 懒加载预定义标签
+  useEffect(() => {
+    let cancelled = false;
+
+    loadPredefinedTags()
+      .then((categories: PredefinedTagCategory[]) => {
+        if (!cancelled) {
+          setPredefinedCategories(categories);
+          setIsLoadingTags(false);
+        }
+      })
+      .catch((error: unknown) => {
+        console.error("加载预定义标签失败:", error);
+        if (!cancelled) {
+          setIsLoadingTags(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const MAX_TAGS = 8;
   const isLimitReached = selectedTags.length >= MAX_TAGS;
@@ -152,20 +181,20 @@ export function TagManager({
       <div>
         <Label>预定义标签</Label>
         <ScrollArea className="h-[300px] mt-2 border rounded-md p-4">
-          {isLoading ? (
+          {isLoadingTags ? (
             <div className="flex items-center justify-center h-full">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : (
             <div className="space-y-4">
-              {predefinedData?.categories.map((category) => (
+              {predefinedCategories.map((category) => (
                 <div key={category.category}>
                   <h4 className="font-medium text-sm mb-2">
                     {category.displayName}
                   </h4>
                   <div className="flex flex-wrap gap-2">
                     {category.tags.map((tag) => {
-                      const isSelected = selectedTags.includes(tag.name);
+                      const isSelected = selectedTags.includes(tag.displayName);
                       const isDisabled = !isSelected && isLimitReached;
 
                       return (
@@ -177,7 +206,8 @@ export function TagManager({
                             isDisabled && "opacity-50 cursor-not-allowed"
                           )}
                           onClick={() =>
-                            !isDisabled && handleTogglePredefinedTag(tag.name)
+                            !isDisabled &&
+                            handleTogglePredefinedTag(tag.displayName)
                           }
                         >
                           {tag.displayName}

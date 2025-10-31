@@ -190,17 +190,6 @@ export const userTags = pgTable("user_tags", {
     .notNull(),
 });
 
-// 预定义标签表
-export const predefinedTags = pgTable("predefined_tags", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  category: text("category").notNull(), // 标签分类
-  name: text("name").notNull().unique(), // 标签名称
-  displayName: text("display_name").notNull(), // 显示名称
-  description: text("description"), // 标签描述
-  usageCount: integer("usage_count").default(0).notNull(), // 使用次数
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
 export type User = typeof user.$inferSelect;
 export type Session = typeof session.$inferSelect;
 export type Account = typeof account.$inferSelect;
@@ -213,4 +202,3 @@ export type FriendRequest = typeof friendRequests.$inferSelect;
 export type CallRecord = typeof callRecords.$inferSelect;
 export type UnreadMessage = typeof unreadMessages.$inferSelect;
 export type UserTag = typeof userTags.$inferSelect;
-export type PredefinedTag = typeof predefinedTags.$inferSelect;

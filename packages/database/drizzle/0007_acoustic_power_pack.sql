@@ -1,0 +1,1 @@
+DROP TABLE "predefined_tags" CASCADE;

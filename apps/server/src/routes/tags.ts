@@ -54,9 +54,6 @@ router.put("/users/profile/tags", authenticateUser, async (req, res) => {
     // 验证并更新标签
     const result = await tagService.updateUserTags(userId, tags);
 
-    // 增加预定义标签的使用计数
-    await tagService.incrementTagUsage(tags);
-
     return res.json({
       success: true,
       tags: result.tags,
@@ -68,23 +65,6 @@ router.put("/users/profile/tags", authenticateUser, async (req, res) => {
     }
 
     console.error("更新用户标签失败:", error);
-    return res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-/**
- * GET /api/tags/predefined
- * 获取预定义标签列表
- */
-router.get("/tags/predefined", authenticateUser, async (req, res) => {
-  try {
-    const category = req.query.category as string | undefined;
-
-    const result = await tagService.getPredefinedTags(category);
-
-    return res.json(result);
-  } catch (error) {
-    console.error("获取预定义标签失败:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
