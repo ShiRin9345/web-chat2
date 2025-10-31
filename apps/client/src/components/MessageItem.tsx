@@ -97,7 +97,7 @@ export const MessageItem = memo(function MessageItem({
 
           <div
             className={cn(
-              "break-words",
+              "break-words w-full",
               // 图片和文件消息不需要背景和内边距
               message.type === "image" || message.type === "file"
                 ? ""
