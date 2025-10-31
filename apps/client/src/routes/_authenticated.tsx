@@ -20,7 +20,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@workspace/ui/components/tooltip";
-import { MessageSquare, Users, Settings } from "lucide-react";
+import { MessageSquare, Users, Settings, Bot } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { useNavigate } from "@tanstack/react-router";
 import { UserProfilePopover } from "@/components/UserProfilePopover";
@@ -69,6 +69,11 @@ function AuthenticatedLayout() {
       icon: Users,
       label: "联系人",
       href: "/contacts",
+    },
+    {
+      icon: Bot,
+      label: "AI助手",
+      href: "/assistant",
     },
     {
       icon: Settings,

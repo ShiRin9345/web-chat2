@@ -1,0 +1,259 @@
+import { Router } from "express";
+import { streamText, convertToModelMessages, tool, stepCountIs } from "ai";
+import { createOpenAI } from "@ai-sdk/openai";
+import { authenticateUser } from "@/middleware/auth";
+import { createMcpServer } from "@/services/mcpServer";
+import type { Request, Response } from "express";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { z } from "zod";
+import { config } from "dotenv";
+
+config({ path: "../../.env.local" });
+
+export const assistantRouter = Router();
+
+// 配置 qwen model (使用 OpenAI 兼容模式)
+let model: any;
+
+try {
+  // 使用 OpenAI provider 通过 DashScope 兼容接口访问 Qwen
+  const qwenProvider = createOpenAI({
+    baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    apiKey: process.env.DASHSCOPE_API_KEY || "",
+  });
+
+  // 使用 Chat Completions API (DashScope 兼容模式不支持 Responses API)
+  // 使用 qwen-plus 模型
+  model = qwenProvider.chat("qwen-plus");
+} catch (error) {
+  console.error("Failed to initialize Qwen model:", error);
+  throw error;
+}
+
+// Context7 MCP Client (如果可用)
+let context7Client: Client | null = null;
+
+// 尝试连接到 Context7 MCP server（如果配置了）
+if (process.env.CONTEXT7_MCP_COMMAND) {
+  try {
+    const [command, ...args] = process.env.CONTEXT7_MCP_COMMAND.split(" ");
+    const transport = new StdioClientTransport({
+      command,
+      args,
+    });
+
+    context7Client = new Client({
+      name: "web-chat-assistant",
+      version: "1.0.0",
+    });
+
+    context7Client.connect(transport).catch((error) => {
+      console.warn("Failed to connect to Context7 MCP server:", error);
+      context7Client = null;
+    });
+  } catch (error) {
+    console.warn("Context7 MCP server not configured:", error);
+  }
+}
+
+// Helper function to query Context7 via MCP
+async function queryContext7Docs(
+  libraryName: string,
+  topic?: string,
+  tokens = 5000
+): Promise<string> {
+  if (!context7Client) {
+    return `Context7 MCP server 未配置。请设置 CONTEXT7_MCP_COMMAND 环境变量。`;
+  }
+
+  try {
+    // 先解析 library ID
+    const resolveResult = await context7Client.callTool({
+      name: "resolve-library-id",
+      arguments: {
+        libraryName,
+      },
+    });
+
+    const libraryId =
+      typeof resolveResult.structuredContent === "object" &&
+      resolveResult.structuredContent !== null &&
+      "libraryId" in resolveResult.structuredContent
+        ? (resolveResult.structuredContent as { libraryId: string }).libraryId
+        : null;
+
+    if (!libraryId) {
+      return `未找到库: ${libraryName}`;
+    }
+
+    // 查询文档
+    const docsResult = await context7Client.callTool({
+      name: "get-library-docs",
+      arguments: {
+        context7CompatibleLibraryID: libraryId,
+        topic,
+        tokens,
+      },
+    });
+
+    const firstContent =
+      Array.isArray(docsResult.content) && docsResult.content.length > 0
+        ? docsResult.content[0]
+        : null;
+
+    return firstContent &&
+      typeof firstContent === "object" &&
+      "text" in firstContent
+      ? (firstContent as { text: string }).text
+      : JSON.stringify(docsResult.structuredContent);
+  } catch (error) {
+    return `查询 Context7 文档时出错: ${
+      error instanceof Error ? error.message : "Unknown error"
+    }`;
+  }
+}
+
+// POST /api/assistant/chat
+assistantRouter.post(
+  "/chat",
+  authenticateUser,
+  async (req: Request, res: Response) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "未授权" });
+      }
+
+      const { messages } = req.body;
+
+      // 创建 MCP server 并获取工具处理函数
+      const { handlers } = createMcpServer({ userId });
+
+      // 创建工具定义
+      const tools = {
+        get_user_info: tool({
+          description: "获取当前用户的详细信息，包括用户ID、姓名、邮箱等",
+          inputSchema: z.object({}),
+          execute: async () => {
+            const result = await handlers.get_user_info();
+            if (result.isError || !result.structuredContent) {
+              throw new Error("Failed to get user info");
+            }
+            return result.structuredContent as {
+              id: string;
+              name: string | null;
+              email: string;
+              image: string | null;
+              code: string;
+            };
+          },
+        }),
+
+        get_user_friends: tool({
+          description: "获取当前用户的好友列表",
+          inputSchema: z.object({}),
+          execute: async () => {
+            const result = await handlers.get_user_friends();
+            if (result.isError || !result.structuredContent) {
+              throw new Error("Failed to get user friends");
+            }
+            return result.structuredContent as {
+              friends: Array<{
+                id: string;
+                name: string | null;
+                email: string;
+                image: string | null;
+              }>;
+            };
+          },
+        }),
+
+        get_user_groups: tool({
+          description: "获取当前用户加入的所有群组列表",
+          inputSchema: z.object({}),
+          execute: async () => {
+            const result = await handlers.get_user_groups();
+            if (result.isError || !result.structuredContent) {
+              throw new Error("Failed to get user groups");
+            }
+            return result.structuredContent as {
+              groups: Array<{
+                id: string;
+                name: string;
+                avatar: string | null;
+              }>;
+            };
+          },
+        }),
+
+        search_messages: tool({
+          description: "在当前用户的消息中搜索关键词",
+          inputSchema: z.object({
+            query: z.string().describe("搜索关键词"),
+            limit: z.number().optional().describe("返回结果数量限制，默认10"),
+          }),
+          execute: async ({ query, limit }) => {
+            const result = await handlers.search_messages({ query, limit });
+            if (result.isError || !result.structuredContent) {
+              throw new Error("Failed to search messages");
+            }
+            return result.structuredContent as {
+              messages: Array<{
+                id: string;
+                content: string;
+                senderId: string;
+                recipientId: string | null;
+                groupId: string | null;
+                createdAt: string;
+              }>;
+            };
+          },
+        }),
+
+        query_context7_docs: tool({
+          description: "使用 Context7 查询指定库的文档",
+          inputSchema: z.object({
+            libraryName: z.string().describe("要查询的库名称"),
+            topic: z.string().optional().describe("要查询的主题，可选"),
+            tokens: z
+              .number()
+              .optional()
+              .describe("返回的最大token数，默认5000"),
+          }),
+          execute: async ({ libraryName, topic, tokens }) => {
+            const docs = await queryContext7Docs(libraryName, topic, tokens);
+            return { documentation: docs };
+          },
+        }),
+      };
+
+      // 流式生成响应
+      const result = streamText({
+        model,
+        system: `你是一个智能助手，可以帮助用户查询他们的信息、好友列表、群组、消息等。
+你可以使用以下工具：
+- get_user_info: 获取当前用户信息
+- get_user_friends: 获取用户好友列表
+- get_user_groups: 获取用户群组列表
+- search_messages: 搜索用户消息
+- query_context7_docs: 查询技术文档（通过 Context7）
+
+请用中文回答用户的问题。`,
+        messages: convertToModelMessages(messages),
+        tools,
+        stopWhen: stepCountIs(5),
+      });
+
+      // 在 Express 中使用 pipeUIMessageStreamToResponse 而不是 toUIMessageStreamResponse
+      result.pipeUIMessageStreamToResponse(res);
+      return;
+    } catch (error) {
+      console.error("Assistant chat error:", error);
+      return res.status(500).json({
+        error: "处理请求时出错",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  }
+);

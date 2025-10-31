@@ -12,6 +12,7 @@ import { callsRouter } from "@/routes/calls";
 import { messagesRouter } from "@/routes/messages";
 import tagsRouter from "@/routes/tags";
 import recommendationsRouter from "@/routes/recommendations";
+import { assistantRouter } from "@/routes/assistant";
 import { SocketService } from "@/services/socket";
 import { embeddingService } from "@/services/embedding";
 config({ path: ".env.local" });
@@ -55,6 +56,7 @@ app.use("/api/calls", callsRouter);
 app.use("/api/messages", messagesRouter);
 app.use("/api", tagsRouter);
 app.use("/api", recommendationsRouter);
+app.use("/api/assistant", assistantRouter);
 
 app.get("/check", (_req, res) => {
   res.send("Hello World");
