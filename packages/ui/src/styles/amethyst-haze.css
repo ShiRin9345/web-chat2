@@ -1,5 +1,5 @@
 @import "./theme-base.css";
-:root {
+.theme-amethyst-haze {
   --background: oklch(0.9777 0.0041 301.4256);
   --foreground: oklch(0.3651 0.0325 287.0807);
   --card: oklch(1 0 0);
@@ -59,7 +59,7 @@
   --spacing: 0.25rem;
 }
 
-.dark {
+.theme-amethyst-haze.dark {
   --background: oklch(0.2166 0.0215 292.8474);
   --foreground: oklch(0.9053 0.0245 293.557);
   --card: oklch(0.2544 0.0301 292.7315);

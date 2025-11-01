@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useThemeStore } from "@/stores/theme";
 import type { ThemeId } from "@/stores/theme";
 
@@ -10,10 +10,10 @@ import type { ThemeId } from "@/stores/theme";
  * 1. 动态导入 CSS（懒加载）
  * 2. 在顶层元素上添加/移除类名来控制主题
  */
-async function loadThemeCSS(
-  themeId: ThemeId,
-  oldThemeId: ThemeId | null
-): Promise<void> {
+async function loadThemeCSS(themeId: ThemeId): Promise<void> {
+  // 获取 <html> 元素（必须在 try 外部，以便 catch 中也能访问）
+  const rootElement = document.documentElement;
+
   // 动态导入新的主题CSS（懒加载）
   try {
     switch (themeId) {
@@ -48,26 +48,39 @@ async function loadThemeCSS(
         await import("@workspace/ui/globals.css");
     }
 
-    // CSS 加载后，在顶层元素上添加/移除类名
-    // 使用 document.documentElement (html) 或 #app
-    const rootElement =
-      document.querySelector("#app") || document.documentElement;
-
-    // 移除旧的主题类名
-    if (oldThemeId) {
-      rootElement.classList.remove(`theme-${oldThemeId}`);
-    }
-
-    // 添加新的主题类名（使用 nextTick 的概念，等待 DOM 更新）
-    // 在 React 中，我们可以直接添加，因为 useEffect 已经在 DOM 更新后执行
-    requestAnimationFrame(() => {
-      rootElement.classList.add(`theme-${themeId}`);
+    // CSS 加载后，在 <html> 元素上添加/移除类名
+    // 移除所有可能的主题类名（避免残留）
+    const themeNames = [
+      "globals",
+      "orange",
+      "quantum-rose",
+      "claude",
+      "amethyst-haze",
+      "bold-tech",
+      "kodama-grove",
+      "soft-pop",
+      "starry-night",
+    ];
+    themeNames.forEach((name) => {
+      rootElement.classList.remove(`theme-${name}`);
     });
+
+    // 立即添加新的主题类名
+    rootElement.classList.add(`theme-${themeId}`);
+
+    // 调试日志（开发环境）
+    if (import.meta.env.DEV) {
+      console.log(`[ThemeProvider] Applied theme: ${themeId}`, {
+        className: `theme-${themeId}`,
+        htmlClasses: rootElement.className,
+      });
+    }
   } catch (error) {
     console.error(`Failed to load theme ${themeId}:`, error);
     // 如果加载失败，尝试加载默认主题
     if (themeId !== "globals") {
       await import("@workspace/ui/globals.css");
+      rootElement.classList.add(`theme-globals`);
     }
   }
 }
@@ -79,16 +92,10 @@ async function loadThemeCSS(
  */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const themeId = useThemeStore((state) => state.themeId);
-  const previousThemeRef = useRef<ThemeId | null>(null);
 
   useEffect(() => {
-    const oldThemeId = previousThemeRef.current;
-
     // 懒加载主题CSS并应用类名
-    loadThemeCSS(themeId, oldThemeId);
-
-    // 保存当前主题，用于下次切换
-    previousThemeRef.current = themeId;
+    loadThemeCSS(themeId);
   }, [themeId]);
 
   return <>{children}</>;

@@ -1,5 +1,5 @@
 @import "./theme-base.css";
-:root {
+.theme-bold-tech {
   --background: oklch(1 0 0);
   --foreground: oklch(0.3588 0.1354 278.6973);
   --card: oklch(1 0 0);
@@ -59,7 +59,7 @@
   --spacing: 0.25rem;
 }
 
-.dark {
+.theme-bold-tech.dark {
   --background: oklch(0.2077 0.0398 265.7549);
   --foreground: oklch(0.9299 0.0334 272.7879);
   --card: oklch(0.2573 0.0861 281.2883);

@@ -1,5 +1,5 @@
 @import "./theme-base.css";
-:root {
+.theme-soft-pop {
   --background: oklch(0.9789 0.0082 121.6272);
   --foreground: oklch(0 0 0);
   --card: oklch(1 0 0);
@@ -59,7 +59,7 @@
   --spacing: 0.25rem;
 }
 
-.dark {
+.theme-soft-pop.dark {
   --background: oklch(0 0 0);
   --foreground: oklch(1 0 0);
   --card: oklch(0.2455 0.0217 257.2823);

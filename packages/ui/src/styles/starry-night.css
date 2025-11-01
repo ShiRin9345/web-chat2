@@ -1,5 +1,5 @@
 @import "./theme-base.css";
-:root {
+.theme-starry-night {
   --background: oklch(0.9755 0.0045 258.3245);
   --foreground: oklch(0.2558 0.0433 268.0662);
   --card: oklch(0.9341 0.0132 251.5628);
@@ -59,7 +59,7 @@
   --spacing: 0.25rem;
 }
 
-.dark {
+.theme-starry-night.dark {
   --background: oklch(0.2204 0.0198 275.8439);
   --foreground: oklch(0.9366 0.0129 266.6974);
   --card: oklch(0.2703 0.0407 281.3036);

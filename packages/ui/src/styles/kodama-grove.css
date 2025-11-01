@@ -1,5 +1,5 @@
 @import "./theme-base.css";
-:root {
+.theme-kodama-grove {
   --background: oklch(0.8798 0.0534 91.7893);
   --foreground: oklch(0.4265 0.031 59.2153);
   --card: oklch(0.8937 0.0395 87.5676);
@@ -59,7 +59,7 @@
   --spacing: 0.25rem;
 }
 
-.dark {
+.theme-kodama-grove.dark {
   --background: oklch(0.3303 0.0214 88.0737);
   --foreground: oklch(0.9217 0.0235 82.1191);
   --card: oklch(0.3583 0.0165 82.3257);

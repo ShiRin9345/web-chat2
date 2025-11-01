@@ -1,5 +1,5 @@
 @import "./theme-base.css";
-:root {
+.theme-quantum-rose {
   --background: oklch(0.9692 0.0192 343.9344);
   --foreground: oklch(0.4426 0.1653 352.3762);
   --card: oklch(0.9837 0.0107 339.3288);
@@ -59,7 +59,7 @@
   --spacing: 0.25rem;
 }
 
-.dark {
+.theme-quantum-rose.dark {
   --background: oklch(0.1808 0.0535 313.7159);
   --foreground: oklch(0.8624 0.1307 326.6356);
   --card: oklch(0.2398 0.0661 313.2337);

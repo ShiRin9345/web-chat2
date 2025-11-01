@@ -89,7 +89,7 @@ function AuthenticatedLayout() {
         <SidebarProvider>
           <div className="flex h-screen w-full">
             <Sidebar className="border-r">
-              <SidebarContent className="flex flex-col items-center py-4">
+              <SidebarContent className="flex flex-col items-center py-4 h-full">
                 <div className="flex flex-col items-center space-y-2">
                   {navigationItems.map((item) => (
                     <Tooltip key={item.label}>
@@ -116,20 +116,24 @@ function AuthenticatedLayout() {
                   ))}
                 </div>
 
+                <div className="flex-1" />
+
                 <Separator className="my-4" />
 
-                {/* 用户头像和菜单 */}
-                <ModeToggle />
-                <UserProfilePopover>
-                  <button className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-accent transition-colors">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={session?.user?.image || undefined} />
-                      <AvatarFallback>
-                        {session?.user?.name?.charAt(0) || "U"}
-                      </AvatarFallback>
-                    </Avatar>
-                  </button>
-                </UserProfilePopover>
+                {/* 用户头像和菜单 - 在底部对齐 */}
+                <div className="flex flex-col items-center space-y-2">
+                  <ModeToggle />
+                  <UserProfilePopover>
+                    <button className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-accent transition-colors">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={session?.user?.image || undefined} />
+                        <AvatarFallback>
+                          {session?.user?.name?.charAt(0) || "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                    </button>
+                  </UserProfilePopover>
+                </div>
               </SidebarContent>
             </Sidebar>
             <Outlet />

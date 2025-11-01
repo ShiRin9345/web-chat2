@@ -362,26 +362,6 @@ function SettingsPage() {
             <div className="space-y-6">
               {/* 主题选择器 */}
               <ThemeColorSelector />
-              
-              {/* 字体大小设置 */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>字体大小</Label>
-                  <p className="text-sm text-muted-foreground">
-                    调整应用字体大小
-                  </p>
-                </div>
-                <Select defaultValue="medium">
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="small">小</SelectItem>
-                    <SelectItem value="medium">中</SelectItem>
-                    <SelectItem value="large">大</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
           </div>
         );
