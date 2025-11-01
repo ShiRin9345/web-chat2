@@ -89,9 +89,19 @@ function MessagesLayout() {
   const isLoading = getIsLoading();
   const filteredConversations = getFilteredConversations();
 
+  // 判断是否是根路由（/messages 或 /messages/）
+  const isRootRoute =
+    location.pathname === "/messages" || location.pathname === "/messages/";
+
   return (
     <ResizablePanelGroup direction="horizontal" className="flex-1">
-      <ResizablePanel defaultSize={25} minSize={20} maxSize={30}>
+      {/* 左侧面板：小屏幕时，如果是子路由则宽度为0 */}
+      <ResizablePanel
+        defaultSize={25}
+        minSize={20}
+        maxSize={30}
+        className={isRootRoute ? "" : "max-md:!flex-[0]"}
+      >
         <div className="h-full border-r bg-background">
           <div className="p-4 h-full">
             <h2 className="text-lg font-semibold mb-4">最近会话</h2>
@@ -121,8 +131,14 @@ function MessagesLayout() {
           </div>
         </div>
       </ResizablePanel>
-      <ResizableHandle withHandle />
-      <ResizablePanel defaultSize={75}>
+
+      <ResizableHandle withHandle className="hidden md:flex" />
+
+      {/* 右侧面板：小屏幕时，如果是根路由则宽度为0 */}
+      <ResizablePanel
+        defaultSize={75}
+        className={isRootRoute ? "max-md:!flex-[0]" : ""}
+      >
         <Outlet />
       </ResizablePanel>
     </ResizablePanelGroup>

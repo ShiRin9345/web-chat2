@@ -82,9 +82,20 @@ function SettingsLayout() {
 
   const activeCategory = getActiveCategory();
 
+  // 判断是否是根路由（/settings 或 /settings/）
+  // 注意：/settings 会自动重定向到 /settings/general，但在重定向前它仍然是根路由
+  const isRootRoute =
+    location.pathname === "/settings" || location.pathname === "/settings/";
+
   return (
     <ResizablePanelGroup direction="horizontal" className="flex-1">
-      <ResizablePanel defaultSize={30} minSize={20} maxSize={40}>
+      {/* 左侧面板：小屏幕时，如果是子路由则宽度为0 */}
+      <ResizablePanel
+        defaultSize={30}
+        minSize={20}
+        maxSize={40}
+        className={isRootRoute ? "" : "max-md:!flex-[0]"}
+      >
         <div className="h-full border-r bg-background">
           <ScrollArea className="h-full">
             <div className="p-4">
@@ -110,10 +121,14 @@ function SettingsLayout() {
         </div>
       </ResizablePanel>
 
-      <ResizableHandle withHandle />
+      <ResizableHandle withHandle className="hidden md:flex" />
 
-      {/* 右侧内容区 */}
-      <ResizablePanel defaultSize={70} minSize={30}>
+      {/* 右侧内容区：小屏幕时，如果是根路由则宽度为0 */}
+      <ResizablePanel
+        defaultSize={70}
+        minSize={30}
+        className={isRootRoute ? "max-md:!flex-[0]" : ""}
+      >
         <div className="h-full bg-background">
           <ScrollArea className="h-full">
             <div className="p-6">
