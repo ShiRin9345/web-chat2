@@ -33,7 +33,7 @@ import type {
   HTMLAttributes,
   KeyboardEventHandler,
 } from "react";
-import { Children } from "react";
+import { Children, useState } from "react";
 
 export type PromptInputProps = HTMLAttributes<HTMLFormElement>;
 export const PromptInput = ({ className, ...props }: PromptInputProps) => (
@@ -59,7 +59,14 @@ export const PromptInputTextarea = ({
   maxHeight = 164,
   ...props
 }: PromptInputTextareaProps) => {
+  const [isComposing, setIsComposing] = useState(false);
+
   const handleKeyDown: KeyboardEventHandler<HTMLTextAreaElement> = (e) => {
+    // 如果正在输入中文（IME composition），不处理回车键
+    if (isComposing && e.key === "Enter") {
+      return;
+    }
+
     if (e.key === "Enter") {
       if (e.shiftKey) {
         // Allow newline
@@ -88,6 +95,8 @@ export const PromptInputTextarea = ({
         onChange?.(e);
       }}
       onKeyDown={handleKeyDown}
+      onCompositionStart={() => setIsComposing(true)}
+      onCompositionEnd={() => setIsComposing(false)}
       placeholder={placeholder}
       {...props}
     />
