@@ -1,18 +1,66 @@
-import type { ComponentProps, HTMLAttributes } from "react";
+import * as React from "react";
+import type { ComponentProps, HTMLAttributes, ReactNode } from "react";
 import { Badge } from "@workspace/ui/components/badge";
 import { cn } from "@workspace/ui/lib/utils";
 
 export type StatusProps = ComponentProps<typeof Badge> & {
   status: "online" | "offline" | "maintenance" | "degraded";
+  children?: ReactNode;
 };
 
-export const Status = ({ className, status, ...props }: StatusProps) => (
-  <Badge
-    className={cn("flex items-center gap-2", "group", status, className)}
-    variant="secondary"
-    {...props}
-  />
-);
+export const Status = ({
+  className,
+  status,
+  children,
+  ...props
+}: StatusProps) => {
+  // 检查是否有文本内容
+  const childrenArray = React.Children.toArray(children);
+  const hasText = childrenArray.some((child) => {
+    // 检查是否有字符串
+    if (typeof child === "string" && child.trim().length > 0) return true;
+    // 检查是否是 StatusLabel 或有文本内容的元素
+    if (typeof child === "object" && child !== null && "props" in child) {
+      const childProps = child.props as {
+        className?: string;
+        children?: ReactNode;
+      };
+      // StatusLabel 有 text-muted-foreground 类
+      if (childProps.className?.includes("text-muted-foreground")) return true;
+      // 或者有文本子元素
+      if (
+        typeof childProps.children === "string" &&
+        childProps.children.trim().length > 0
+      ) {
+        return true;
+      }
+    }
+    return false;
+  });
+
+  if (!hasText) {
+    // 只有状态指示器时，不使用 Badge 的背景和边框，直接使用透明背景的 span
+    return (
+      <span
+        className={cn("flex items-center gap-2", "group", status, className)}
+        {...props}
+      >
+        {children}
+      </span>
+    );
+  }
+
+  // 有文本时使用 Badge（保持原有的 Badge 样式）
+  return (
+    <Badge
+      className={cn("flex items-center gap-2", "group", status, className)}
+      variant="secondary"
+      {...props}
+    >
+      {children}
+    </Badge>
+  );
+};
 
 export type StatusIndicatorProps = HTMLAttributes<HTMLSpanElement>;
 
