@@ -8,6 +8,9 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { z } from "zod";
 import { config } from "dotenv";
+import { db } from "@workspace/database";
+import { assistantMessages } from "@workspace/database";
+import { eq, desc, lt, and } from "drizzle-orm";
 
 config({ path: "../../.env.local" });
 
@@ -127,6 +130,51 @@ assistantRouter.post(
 
       const { messages } = req.body;
 
+      // 保存用户发送的最新消息
+      const userMessages = messages.filter((msg: any) => msg.role === "user");
+      const lastUserMessage = userMessages[userMessages.length - 1];
+      let userMessageId: string | null = null;
+
+      // 从消息中提取文本内容（可能是 content 字段或 parts 数组）
+      let userMessageContent: string | null = null;
+      if (lastUserMessage) {
+        if (lastUserMessage.content) {
+          userMessageContent = lastUserMessage.content;
+        } else if (
+          lastUserMessage.parts &&
+          Array.isArray(lastUserMessage.parts)
+        ) {
+          // 从 parts 数组中提取文本
+          const textPart = lastUserMessage.parts.find(
+            (part: any) => part.type === "text"
+          );
+          if (textPart?.text) {
+            userMessageContent = textPart.text;
+          }
+        }
+      }
+
+      if (userMessageContent) {
+        try {
+          console.log("保存用户消息:", userMessageContent);
+          const [savedMessage] = await db
+            .insert(assistantMessages)
+            .values({
+              userId,
+              role: "user",
+              content: userMessageContent,
+            })
+            .returning({ id: assistantMessages.id });
+          userMessageId = savedMessage.id;
+          console.log("用户消息保存成功，ID:", userMessageId);
+        } catch (error) {
+          console.error("保存用户消息失败:", error);
+          // 继续执行，不阻塞聊天功能
+        }
+      } else {
+        console.log("没有找到用户消息内容");
+      }
+
       // 创建 MCP server 并获取工具处理函数
       const { handlers } = createMcpServer({ userId });
 
@@ -243,6 +291,32 @@ assistantRouter.post(
         messages: convertToModelMessages(messages),
         tools,
         stopWhen: stepCountIs(5),
+        onFinish: async ({ text, toolCalls, finishReason }) => {
+          // 保存助手响应到数据库
+          try {
+            console.log("保存助手消息，文本长度:", text?.length || 0);
+            // 收集工具调用信息（如果有）
+            let toolCallsJson: string | null = null;
+            if (toolCalls && toolCalls.length > 0) {
+              toolCallsJson = JSON.stringify(toolCalls);
+              console.log("工具调用数量:", toolCalls.length);
+            }
+
+            const [savedMessage] = await db
+              .insert(assistantMessages)
+              .values({
+                userId,
+                role: "assistant",
+                content: text || "",
+                toolCalls: toolCallsJson,
+              })
+              .returning({ id: assistantMessages.id });
+            console.log("助手消息保存成功，ID:", savedMessage.id);
+          } catch (error) {
+            console.error("保存助手消息失败:", error);
+            // 继续执行，不阻塞聊天功能
+          }
+        },
       });
 
       // 在 Express 中使用 pipeUIMessageStreamToResponse 而不是 toUIMessageStreamResponse
@@ -254,6 +328,77 @@ assistantRouter.post(
         error: "处理请求时出错",
         message: error instanceof Error ? error.message : "Unknown error",
       });
+    }
+  }
+);
+
+// GET /api/assistant/history - 获取历史聊天记录
+assistantRouter.get(
+  "/history",
+  authenticateUser,
+  async (req: Request, res: Response) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "未授权" });
+      }
+
+      const { limit = "50", cursor } = req.query;
+      const pageLimit = Number.parseInt(limit as string, 10);
+      if (Number.isNaN(pageLimit) || pageLimit > 100) {
+        return res
+          .status(400)
+          .json({ error: "limit 参数无效或超过最大值 100" });
+      }
+
+      // 构建查询条件
+      let whereCondition = eq(assistantMessages.userId, userId);
+      if (cursor) {
+        const cursorDate = new Date(cursor as string);
+        whereCondition = and(
+          eq(assistantMessages.userId, userId),
+          lt(assistantMessages.createdAt, cursorDate)
+        )!;
+      }
+
+      // 查询消息，按时间降序（最新的在前）
+      const messagesList = await db
+        .select()
+        .from(assistantMessages)
+        .where(whereCondition!)
+        .orderBy(desc(assistantMessages.createdAt))
+        .limit(pageLimit + 1); // 多查询一条用于判断是否还有更多
+
+      console.log(`查询到 ${messagesList.length} 条消息，用户ID: ${userId}`);
+
+      const hasMore = messagesList.length > pageLimit;
+      const messages = hasMore
+        ? messagesList.slice(0, pageLimit)
+        : messagesList;
+
+      // 计算下一页游标（使用最后一条消息的时间戳）
+      const nextCursor =
+        hasMore && messages.length > 0
+          ? messages[messages.length - 1].createdAt.toISOString()
+          : null;
+
+      // 转换消息格式为前端需要的格式
+      const formattedMessages = messages.map((msg) => ({
+        id: msg.id,
+        role: msg.role,
+        content: msg.content,
+        toolCalls: msg.toolCalls ? JSON.parse(msg.toolCalls) : null,
+        createdAt: msg.createdAt.toISOString(),
+      }));
+
+      res.json({
+        messages: formattedMessages,
+        nextCursor,
+        hasMore,
+      });
+    } catch (error) {
+      console.error("获取历史记录失败:", error);
+      res.status(500).json({ error: "获取历史记录失败" });
     }
   }
 );

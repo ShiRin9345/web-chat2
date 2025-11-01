@@ -193,6 +193,18 @@ export const userTags = pgTable("user_tags", {
     .notNull(),
 });
 
+// AI 助手聊天记录表
+export const assistantMessages = pgTable("assistant_message", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  role: text("role").notNull(), // 'user' | 'assistant'
+  content: text("content").notNull(), // 消息内容
+  toolCalls: text("tool_calls"), // JSON格式存储工具调用信息，可选
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export type User = typeof user.$inferSelect;
 export type Session = typeof session.$inferSelect;
 export type Account = typeof account.$inferSelect;
@@ -205,3 +217,4 @@ export type FriendRequest = typeof friendRequests.$inferSelect;
 export type CallRecord = typeof callRecords.$inferSelect;
 export type UnreadMessage = typeof unreadMessages.$inferSelect;
 export type UserTag = typeof userTags.$inferSelect;
+export type AssistantMessage = typeof assistantMessages.$inferSelect;

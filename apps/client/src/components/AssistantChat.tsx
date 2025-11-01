@@ -30,12 +30,89 @@ import {
 export function AssistantChat() {
   const { data: session } = authClient.useSession();
   const [input, setInput] = React.useState("");
-  const { messages, sendMessage, status, error } = useChat({
+  const [isLoadingHistory, setIsLoadingHistory] = React.useState(true);
+  const { messages, sendMessage, status, error, setMessages } = useChat({
     transport: new DefaultChatTransport({
       api: `${API_BASE}/assistant/chat`,
       credentials: "include",
     }),
   });
+
+  // 加载历史记录
+  React.useEffect(() => {
+    async function loadHistory() {
+      if (!session?.user?.id) {
+        setIsLoadingHistory(false);
+        return;
+      }
+
+      try {
+        console.log("开始加载历史记录...");
+        const response = await fetch(`${API_BASE}/assistant/history?limit=50`, {
+          credentials: "include",
+        });
+
+        if (!response.ok) {
+          console.error(
+            "加载历史记录失败:",
+            response.status,
+            response.statusText
+          );
+          return;
+        }
+
+        const data = await response.json();
+        console.log("收到历史记录数据:", data);
+
+        if (data.messages && data.messages.length > 0) {
+          // 将历史记录转换为 useChat 需要的格式
+          // 注意：需要反转顺序，因为历史记录是按时间降序排列的（最新的在前）
+          const formattedMessages = data.messages.reverse().map((msg: any) => {
+            const baseMessage: any = {
+              id: msg.id,
+              role: msg.role,
+              parts: [
+                {
+                  type: "text",
+                  text: msg.content,
+                },
+              ],
+            };
+
+            // 如果有工具调用，添加到消息中
+            if (msg.toolCalls && Array.isArray(msg.toolCalls)) {
+              msg.toolCalls.forEach((toolCall: any) => {
+                baseMessage.parts.push({
+                  type: `tool-${
+                    toolCall.toolName || toolCall.toolCallId || "unknown"
+                  }`,
+                  toolName:
+                    toolCall.toolName || toolCall.toolCallId || "unknown",
+                  state: "complete",
+                  input: toolCall.args || toolCall.arguments,
+                  output: toolCall.result || toolCall.output,
+                });
+              });
+            }
+
+            return baseMessage;
+          });
+
+          console.log("格式化后的消息:", formattedMessages);
+          // 设置初始消息
+          setMessages(formattedMessages);
+        } else {
+          console.log("没有历史记录");
+        }
+      } catch (error) {
+        console.error("加载历史记录失败:", error);
+      } finally {
+        setIsLoadingHistory(false);
+      }
+    }
+
+    loadHistory();
+  }, [session?.user?.id, setMessages]);
 
   const handleSubmit = (e?: React.FormEvent<HTMLFormElement>) => {
     e?.preventDefault();
@@ -65,7 +142,12 @@ export function AssistantChat() {
       {/* Messages */}
       <Conversation>
         <ConversationContent>
-          {messages.length === 0 && (
+          {isLoadingHistory ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Loader size={24} />
+              <p className="mt-4 text-muted-foreground">加载历史记录...</p>
+            </div>
+          ) : messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Bot className="mb-4 h-12 w-12 text-muted-foreground" />
               <h2 className="mb-2 text-lg font-semibold">开始对话</h2>
@@ -73,7 +155,7 @@ export function AssistantChat() {
                 问我任何问题，我可以帮您查询信息或搜索消息
               </p>
             </div>
-          )}
+          ) : null}
 
           {messages.map((message, messageIndex) => {
             const isLastMessage = messageIndex === messages.length - 1;
