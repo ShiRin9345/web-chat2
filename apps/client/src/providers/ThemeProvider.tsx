@@ -44,6 +44,9 @@ async function loadThemeCSS(themeId: ThemeId): Promise<void> {
       case "starry-night":
         await import("@workspace/ui/starry-night.css");
         break;
+      case "bugglegum":
+        await import("@workspace/ui/bugglegum.css");
+        break;
       default:
         await import("@workspace/ui/globals.css");
     }
@@ -60,6 +63,7 @@ async function loadThemeCSS(themeId: ThemeId): Promise<void> {
       "kodama-grove",
       "soft-pop",
       "starry-night",
+      "bugglegum",
     ];
     themeNames.forEach((name) => {
       rootElement.classList.remove(`theme-${name}`);

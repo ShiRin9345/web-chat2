@@ -11,6 +11,7 @@ export const AVAILABLE_THEMES = [
   "kodama-grove",
   "soft-pop",
   "starry-night",
+  "bugglegum",
 ] as const;
 
 export type ThemeId = (typeof AVAILABLE_THEMES)[number];

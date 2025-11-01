@@ -103,6 +103,16 @@ export const themes: Theme[] = [
       destructive: "oklch(0.704 0.191 22.216)",
     },
   },
+  {
+    id: "bugglegum",
+    displayName: "泡泡糖",
+    colors: {
+      primary: "oklch(0.6209 0.1801 348.1385)",
+      secondary: "oklch(0.8095 0.0694 198.1863)",
+      accent: "oklch(0.9195 0.0801 87.667)",
+      destructive: "oklch(0.7091 0.1697 21.9551)",
+    },
+  },
 ];
 
 export const getThemeById = (id: ThemeId): Theme | undefined => {
