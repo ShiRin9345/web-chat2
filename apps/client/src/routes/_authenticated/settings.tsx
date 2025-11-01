@@ -25,6 +25,7 @@ import {
   Palette,
 } from "lucide-react";
 import { useState } from "react";
+import { ThemeColorSelector } from "@/components/ThemeColorSelector";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
@@ -357,25 +358,18 @@ function SettingsPage() {
       case "appearance":
         return (
           <div className="space-y-6">
-            <h3 className="text-lg font-semibold mb-4">超级调色盘</h3>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>主题色彩</Label>
-                  <p className="text-sm text-muted-foreground">
-                    选择应用主题色
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <div className="w-8 h-8 bg-blue-500 rounded-full cursor-pointer border-2 border-blue-500"></div>
-                  <div className="w-8 h-8 bg-green-500 rounded-full cursor-pointer border-2 border-transparent"></div>
-                  <div className="w-8 h-8 bg-purple-500 rounded-full cursor-pointer border-2 border-transparent"></div>
-                  <div className="w-8 h-8 bg-red-500 rounded-full cursor-pointer border-2 border-transparent"></div>
-                </div>
-              </div>
+            <h3 className="text-lg font-semibold mb-4">外观设置</h3>
+            <div className="space-y-6">
+              {/* 主题选择器 */}
+              <ThemeColorSelector />
+              
+              {/* 字体大小设置 */}
               <div className="flex items-center justify-between">
                 <div>
                   <Label>字体大小</Label>
+                  <p className="text-sm text-muted-foreground">
+                    调整应用字体大小
+                  </p>
                 </div>
                 <Select defaultValue="medium">
                   <SelectTrigger className="w-32">

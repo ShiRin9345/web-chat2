@@ -7,7 +7,7 @@ import { authClient } from "@/lib/auth-client";
 // Import the generated route tree
 import { routeTree } from "@/routeTree.gen";
 
-import "@workspace/ui/orange.css";
+// 主题 CSS 将通过 ThemeProvider 动态加载
 
 const TanStackQueryProviderContext = TanStackQueryProvider.getContext();
 const router = createRouter({
