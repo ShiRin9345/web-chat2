@@ -20,7 +20,7 @@ export function ThemeColorSelector() {
         </p>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {themes.map((theme) => {
           const isSelected = currentThemeId === theme.id;
 
@@ -31,33 +31,36 @@ export function ThemeColorSelector() {
               className={cn(
                 "relative flex flex-col items-center p-4 rounded-lg border-2 transition-all",
                 "hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-ring",
+                "min-w-0 w-full", // 确保按钮不会溢出
                 isSelected
                   ? "border-primary bg-primary/5"
                   : "border-border hover:bg-accent"
               )}
             >
               {/* 颜色预览 */}
-              <div className="flex gap-1 mb-3">
+              <div className="flex gap-1 mb-3 w-full justify-center flex-wrap">
                 <div
-                  className="w-8 h-8 rounded border"
+                  className="w-8 h-8 rounded border shrink-0"
                   style={{ backgroundColor: theme.colors.primary }}
                 />
                 <div
-                  className="w-8 h-8 rounded border"
+                  className="w-8 h-8 rounded border shrink-0"
                   style={{ backgroundColor: theme.colors.secondary }}
                 />
                 <div
-                  className="w-8 h-8 rounded border"
+                  className="w-8 h-8 rounded border shrink-0"
                   style={{ backgroundColor: theme.colors.accent }}
                 />
                 <div
-                  className="w-8 h-8 rounded border"
+                  className="w-8 h-8 rounded border shrink-0"
                   style={{ backgroundColor: theme.colors.destructive }}
                 />
               </div>
 
               {/* 主题名称 */}
-              <span className="text-sm font-medium">{theme.displayName}</span>
+              <span className="text-sm font-medium text-center break-words">
+                {theme.displayName}
+              </span>
 
               {/* 选中标识 */}
               {isSelected && (
@@ -74,4 +77,3 @@ export function ThemeColorSelector() {
     </div>
   );
 }
-

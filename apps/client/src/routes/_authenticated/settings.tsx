@@ -67,7 +67,7 @@ function SettingsPage() {
     },
     {
       id: "appearance",
-      name: "超级调色盘",
+      name: "主题",
       icon: Palette,
     },
   ];
