@@ -33,6 +33,7 @@ import {
   XCircleIcon,
 } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
+import { isValidElement } from "react";
 import { CodeBlock } from "./code-block";
 
 export type ToolProps = ComponentProps<typeof Collapsible>;
@@ -135,6 +136,29 @@ export const ToolOutput = ({
     return null;
   }
 
+  // 将 output 转换为可渲染的内容
+  let renderedOutput: ReactNode;
+  if (output === null || output === undefined) {
+    renderedOutput = null;
+  } else if (typeof output === "string") {
+    renderedOutput = output;
+  } else if (isValidElement(output)) {
+    // 如果是有效的 React 元素，直接使用
+    renderedOutput = output;
+  } else if (typeof output === "object") {
+    // 如果是普通对象，格式化为 JSON
+    try {
+      renderedOutput = (
+        <CodeBlock code={JSON.stringify(output, null, 2)} language="json" />
+      );
+    } catch (error) {
+      // 如果无法序列化（如循环引用），显示错误信息
+      renderedOutput = "[无法序列化的对象]";
+    }
+  } else {
+    renderedOutput = String(output);
+  }
+
   return (
     <div className={cn("space-y-2 p-4", className)} {...props}>
       <h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
@@ -149,7 +173,7 @@ export const ToolOutput = ({
         )}
       >
         {errorText && <div>{errorText}</div>}
-        {output && <div>{output}</div>}
+        {renderedOutput && <div>{renderedOutput}</div>}
       </div>
     </div>
   );
