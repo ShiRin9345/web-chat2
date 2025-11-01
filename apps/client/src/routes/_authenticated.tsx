@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useLocation } from "@tanstack/react-router";
 import { useEffect } from "react";
 import {
   SidebarProvider,
@@ -28,6 +28,9 @@ import { DialogProvider } from "@/providers/DialogProvider";
 import { CallProvider } from "@/providers/CallProvider";
 import { Toaster } from "@workspace/ui/components/sonner";
 import { ModeToggle } from "@/components/mode-toggle";
+import { MobileHeader } from "@/components/MobileHeader";
+import { MobileFooter } from "@/components/MobileFooter";
+import { cn } from "@workspace/ui/lib/utils";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AuthenticatedLayout,
@@ -35,7 +38,15 @@ export const Route = createFileRoute("/_authenticated")({
 
 function AuthenticatedLayout() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { data: session, isPending } = authClient.useSession();
+
+  // 判断是否在聊天详情页或 AI 助手页（不显示 header 和 footer）
+  const isChatDetailPage =
+    (location.pathname.startsWith("/messages/") &&
+      location.pathname !== "/messages" &&
+      location.pathname !== "/messages/") ||
+    location.pathname === "/assistant";
 
   // 初始化离线未读计数
   useInitializeOfflineUnreads();
@@ -87,8 +98,12 @@ function AuthenticatedLayout() {
     <TooltipProvider>
       <SocketProvider>
         <SidebarProvider>
+          {/* 移动端 Header（小于 md 时显示，包含 ModeToggle 和 UserProfilePopover） */}
+          {!isChatDetailPage && <MobileHeader />}
+
           <div className="flex h-screen w-full">
-            <Sidebar className="border-r">
+            {/* 桌面端 Sidebar（大于等于 md 时显示） */}
+            <Sidebar className="border-r hidden md:block">
               <SidebarContent className="flex flex-col items-center py-4 h-full">
                 <div className="flex flex-col items-center space-y-2">
                   {navigationItems.map((item) => (
@@ -136,8 +151,21 @@ function AuthenticatedLayout() {
                 </div>
               </SidebarContent>
             </Sidebar>
-            <Outlet />
+
+            {/* 主内容区 - 移动端需要为 header 和 footer 留出空间 */}
+            <div
+              className={cn(
+                "flex-1 flex flex-col overflow-hidden",
+                !isChatDetailPage && "pt-14 pb-16 md:pt-0 md:pb-0"
+              )}
+            >
+              <Outlet />
+            </div>
           </div>
+
+          {/* 移动端 Footer（小于 md 时显示，包含导航项） */}
+          {!isChatDetailPage && <MobileFooter />}
+
           <Toaster />
           <DialogProvider />
           <CallProvider />

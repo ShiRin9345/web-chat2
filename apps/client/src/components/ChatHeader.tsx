@@ -4,7 +4,8 @@ import {
   AvatarImage,
 } from "@workspace/ui/components/avatar";
 import { Button } from "@workspace/ui/components/button";
-import { Phone, Video, MoreHorizontal } from "lucide-react";
+import { Phone, Video, MoreHorizontal, ArrowLeft } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 
 interface ChatInfo {
   type: "friend" | "group" | "unknown";
@@ -30,9 +31,20 @@ export function ChatHeader({
   onVideoCall,
   onOpenInfo,
 }: ChatHeaderProps) {
+  const navigate = useNavigate();
+
   return (
     <div className="p-4 border-b flex items-center justify-between">
       <div className="flex items-center space-x-3">
+        {/* 移动端返回按钮 */}
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => navigate({ to: "/messages" })}
+          className="md:hidden -ml-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
         <div className="relative">
           <Avatar className="h-10 w-10">
             <AvatarImage src={chatInfo.avatar || undefined} />

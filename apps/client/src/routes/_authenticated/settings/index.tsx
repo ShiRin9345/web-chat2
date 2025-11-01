@@ -1,9 +1,16 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/settings/")({
-  beforeLoad: () => {
-    // 如果直接访问 /settings/，重定向到 /settings/general
-    throw redirect({ to: "/settings/general", replace: true });
-  },
+  component: SettingsIndex,
 });
 
+function SettingsIndex() {
+  return (
+    <div className="h-full bg-muted/20 flex items-center justify-center">
+      <div className="text-center text-muted-foreground">
+        <p className="text-lg font-medium">选择一个设置分类</p>
+        <p className="text-sm mt-2">从左侧列表中选择一个设置分类</p>
+      </div>
+    </div>
+  );
+}

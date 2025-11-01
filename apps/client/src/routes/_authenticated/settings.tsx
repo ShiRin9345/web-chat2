@@ -18,7 +18,9 @@ import {
   Users,
   Shield,
   Palette,
+  ArrowLeft,
 } from "lucide-react";
+import { Button } from "@workspace/ui/components/button";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsLayout,
@@ -73,23 +75,22 @@ function SettingsLayout() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // 获取当前激活的分类
+  // 获取当前激活的分类（只有明确在子路由时才高亮）
   const getActiveCategory = () => {
     const path = location.pathname;
     const category = settingsCategories.find((cat) => path === cat.path);
-    return category?.id || "general";
+    return category?.id || null; // 根路由时返回 null，不显示选中样式
   };
 
   const activeCategory = getActiveCategory();
 
   // 判断是否是根路由（/settings 或 /settings/）
-  // 注意：/settings 会自动重定向到 /settings/general，但在重定向前它仍然是根路由
   const isRootRoute =
     location.pathname === "/settings" || location.pathname === "/settings/";
 
   return (
     <ResizablePanelGroup direction="horizontal" className="flex-1">
-      {/* 左侧面板：小屏幕时，如果是子路由则宽度为0 */}
+      {/* 左侧面板：分类列表，小屏幕时如果是子路由则宽度为0 */}
       <ResizablePanel
         defaultSize={30}
         minSize={20}
@@ -123,18 +124,30 @@ function SettingsLayout() {
 
       <ResizableHandle withHandle className="hidden md:flex" />
 
-      {/* 右侧内容区：小屏幕时，如果是根路由则宽度为0 */}
+      {/* 右侧面板：具体设置内容，小屏幕时如果是根路由则宽度为0 */}
       <ResizablePanel
         defaultSize={70}
         minSize={30}
         className={isRootRoute ? "max-md:!flex-[0]" : ""}
       >
-        <div className="h-full bg-background">
-          <ScrollArea className="h-full">
-            <div className="p-6">
-              <Outlet />
+        <div className="h-full flex flex-col">
+          {/* 返回按钮：只在移动端子路由时显示 */}
+          {!isRootRoute && (
+            <div className="border-b p-2 md:hidden">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate({ to: "/settings" })}
+                className="-ml-2"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                返回
+              </Button>
             </div>
-          </ScrollArea>
+          )}
+          <div className="flex-1 overflow-hidden">
+            <Outlet />
+          </div>
         </div>
       </ResizablePanel>
     </ResizablePanelGroup>

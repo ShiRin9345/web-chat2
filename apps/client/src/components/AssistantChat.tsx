@@ -3,9 +3,11 @@
 import * as React from "react";
 import { useChat } from "@ai-sdk/react";
 import { authClient } from "@/lib/auth-client";
-import { Bot } from "lucide-react";
+import { Bot, ArrowLeft } from "lucide-react";
 import { DefaultChatTransport } from "ai";
 import { API_BASE } from "@/lib/api-config";
+import { useNavigate } from "@tanstack/react-router";
+import { Button } from "@workspace/ui/components/button";
 import {
   Conversation,
   ConversationContent,
@@ -29,6 +31,7 @@ import {
 
 export function AssistantChat() {
   const { data: session } = authClient.useSession();
+  const navigate = useNavigate();
   const [input, setInput] = React.useState("");
   const [isLoadingHistory, setIsLoadingHistory] = React.useState(true);
   const { messages, sendMessage, status, error, setMessages } = useChat({
@@ -127,6 +130,15 @@ export function AssistantChat() {
       {/* Header */}
       <div className="border-b px-6 py-4">
         <div className="flex items-center gap-3">
+          {/* 移动端返回按钮 */}
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => navigate({ to: "/messages" })}
+            className="md:hidden -ml-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary">
             <Bot className="h-5 w-5 text-primary-foreground" />
           </div>
