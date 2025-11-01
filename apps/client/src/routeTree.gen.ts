@@ -17,7 +17,15 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedMessagesRouteImport } from './routes/_authenticated/messages'
 import { Route as AuthenticatedContactsRouteImport } from './routes/_authenticated/contacts'
 import { Route as AuthenticatedAssistantRouteImport } from './routes/_authenticated/assistant'
+import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
 import { Route as AuthenticatedMessagesIndexRouteImport } from './routes/_authenticated/messages/index'
+import { Route as AuthenticatedSettingsThemeRouteImport } from './routes/_authenticated/settings/theme'
+import { Route as AuthenticatedSettingsStorageRouteImport } from './routes/_authenticated/settings/storage'
+import { Route as AuthenticatedSettingsShortcutsRouteImport } from './routes/_authenticated/settings/shortcuts'
+import { Route as AuthenticatedSettingsSecurityRouteImport } from './routes/_authenticated/settings/security'
+import { Route as AuthenticatedSettingsPrivacyRouteImport } from './routes/_authenticated/settings/privacy'
+import { Route as AuthenticatedSettingsNotificationsRouteImport } from './routes/_authenticated/settings/notifications'
+import { Route as AuthenticatedSettingsGeneralRouteImport } from './routes/_authenticated/settings/general'
 import { Route as AuthenticatedMessagesChatIdRouteImport } from './routes/_authenticated/messages/$chatId'
 
 const SignUpRoute = SignUpRouteImport.update({
@@ -59,11 +67,59 @@ const AuthenticatedAssistantRoute = AuthenticatedAssistantRouteImport.update({
   path: '/assistant',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedSettingsIndexRoute =
+  AuthenticatedSettingsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
 const AuthenticatedMessagesIndexRoute =
   AuthenticatedMessagesIndexRouteImport.update({
     id: '/',
     path: '/',
     getParentRoute: () => AuthenticatedMessagesRoute,
+  } as any)
+const AuthenticatedSettingsThemeRoute =
+  AuthenticatedSettingsThemeRouteImport.update({
+    id: '/theme',
+    path: '/theme',
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
+const AuthenticatedSettingsStorageRoute =
+  AuthenticatedSettingsStorageRouteImport.update({
+    id: '/storage',
+    path: '/storage',
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
+const AuthenticatedSettingsShortcutsRoute =
+  AuthenticatedSettingsShortcutsRouteImport.update({
+    id: '/shortcuts',
+    path: '/shortcuts',
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
+const AuthenticatedSettingsSecurityRoute =
+  AuthenticatedSettingsSecurityRouteImport.update({
+    id: '/security',
+    path: '/security',
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
+const AuthenticatedSettingsPrivacyRoute =
+  AuthenticatedSettingsPrivacyRouteImport.update({
+    id: '/privacy',
+    path: '/privacy',
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
+const AuthenticatedSettingsNotificationsRoute =
+  AuthenticatedSettingsNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
+const AuthenticatedSettingsGeneralRoute =
+  AuthenticatedSettingsGeneralRouteImport.update({
+    id: '/general',
+    path: '/general',
+    getParentRoute: () => AuthenticatedSettingsRoute,
   } as any)
 const AuthenticatedMessagesChatIdRoute =
   AuthenticatedMessagesChatIdRouteImport.update({
@@ -79,9 +135,17 @@ export interface FileRoutesByFullPath {
   '/assistant': typeof AuthenticatedAssistantRoute
   '/contacts': typeof AuthenticatedContactsRoute
   '/messages': typeof AuthenticatedMessagesRouteWithChildren
-  '/settings': typeof AuthenticatedSettingsRoute
+  '/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/messages/$chatId': typeof AuthenticatedMessagesChatIdRoute
+  '/settings/general': typeof AuthenticatedSettingsGeneralRoute
+  '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
+  '/settings/privacy': typeof AuthenticatedSettingsPrivacyRoute
+  '/settings/security': typeof AuthenticatedSettingsSecurityRoute
+  '/settings/shortcuts': typeof AuthenticatedSettingsShortcutsRoute
+  '/settings/storage': typeof AuthenticatedSettingsStorageRoute
+  '/settings/theme': typeof AuthenticatedSettingsThemeRoute
   '/messages/': typeof AuthenticatedMessagesIndexRoute
+  '/settings/': typeof AuthenticatedSettingsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -89,9 +153,16 @@ export interface FileRoutesByTo {
   '/signUp': typeof SignUpRoute
   '/assistant': typeof AuthenticatedAssistantRoute
   '/contacts': typeof AuthenticatedContactsRoute
-  '/settings': typeof AuthenticatedSettingsRoute
   '/messages/$chatId': typeof AuthenticatedMessagesChatIdRoute
+  '/settings/general': typeof AuthenticatedSettingsGeneralRoute
+  '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
+  '/settings/privacy': typeof AuthenticatedSettingsPrivacyRoute
+  '/settings/security': typeof AuthenticatedSettingsSecurityRoute
+  '/settings/shortcuts': typeof AuthenticatedSettingsShortcutsRoute
+  '/settings/storage': typeof AuthenticatedSettingsStorageRoute
+  '/settings/theme': typeof AuthenticatedSettingsThemeRoute
   '/messages': typeof AuthenticatedMessagesIndexRoute
+  '/settings': typeof AuthenticatedSettingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -102,9 +173,17 @@ export interface FileRoutesById {
   '/_authenticated/assistant': typeof AuthenticatedAssistantRoute
   '/_authenticated/contacts': typeof AuthenticatedContactsRoute
   '/_authenticated/messages': typeof AuthenticatedMessagesRouteWithChildren
-  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/_authenticated/messages/$chatId': typeof AuthenticatedMessagesChatIdRoute
+  '/_authenticated/settings/general': typeof AuthenticatedSettingsGeneralRoute
+  '/_authenticated/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
+  '/_authenticated/settings/privacy': typeof AuthenticatedSettingsPrivacyRoute
+  '/_authenticated/settings/security': typeof AuthenticatedSettingsSecurityRoute
+  '/_authenticated/settings/shortcuts': typeof AuthenticatedSettingsShortcutsRoute
+  '/_authenticated/settings/storage': typeof AuthenticatedSettingsStorageRoute
+  '/_authenticated/settings/theme': typeof AuthenticatedSettingsThemeRoute
   '/_authenticated/messages/': typeof AuthenticatedMessagesIndexRoute
+  '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -117,7 +196,15 @@ export interface FileRouteTypes {
     | '/messages'
     | '/settings'
     | '/messages/$chatId'
+    | '/settings/general'
+    | '/settings/notifications'
+    | '/settings/privacy'
+    | '/settings/security'
+    | '/settings/shortcuts'
+    | '/settings/storage'
+    | '/settings/theme'
     | '/messages/'
+    | '/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -125,9 +212,16 @@ export interface FileRouteTypes {
     | '/signUp'
     | '/assistant'
     | '/contacts'
-    | '/settings'
     | '/messages/$chatId'
+    | '/settings/general'
+    | '/settings/notifications'
+    | '/settings/privacy'
+    | '/settings/security'
+    | '/settings/shortcuts'
+    | '/settings/storage'
+    | '/settings/theme'
     | '/messages'
+    | '/settings'
   id:
     | '__root__'
     | '/'
@@ -139,7 +233,15 @@ export interface FileRouteTypes {
     | '/_authenticated/messages'
     | '/_authenticated/settings'
     | '/_authenticated/messages/$chatId'
+    | '/_authenticated/settings/general'
+    | '/_authenticated/settings/notifications'
+    | '/_authenticated/settings/privacy'
+    | '/_authenticated/settings/security'
+    | '/_authenticated/settings/shortcuts'
+    | '/_authenticated/settings/storage'
+    | '/_authenticated/settings/theme'
     | '/_authenticated/messages/'
+    | '/_authenticated/settings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -207,12 +309,68 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAssistantRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/settings/': {
+      id: '/_authenticated/settings/'
+      path: '/'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof AuthenticatedSettingsIndexRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
+    }
     '/_authenticated/messages/': {
       id: '/_authenticated/messages/'
       path: '/'
       fullPath: '/messages/'
       preLoaderRoute: typeof AuthenticatedMessagesIndexRouteImport
       parentRoute: typeof AuthenticatedMessagesRoute
+    }
+    '/_authenticated/settings/theme': {
+      id: '/_authenticated/settings/theme'
+      path: '/theme'
+      fullPath: '/settings/theme'
+      preLoaderRoute: typeof AuthenticatedSettingsThemeRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
+    }
+    '/_authenticated/settings/storage': {
+      id: '/_authenticated/settings/storage'
+      path: '/storage'
+      fullPath: '/settings/storage'
+      preLoaderRoute: typeof AuthenticatedSettingsStorageRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
+    }
+    '/_authenticated/settings/shortcuts': {
+      id: '/_authenticated/settings/shortcuts'
+      path: '/shortcuts'
+      fullPath: '/settings/shortcuts'
+      preLoaderRoute: typeof AuthenticatedSettingsShortcutsRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
+    }
+    '/_authenticated/settings/security': {
+      id: '/_authenticated/settings/security'
+      path: '/security'
+      fullPath: '/settings/security'
+      preLoaderRoute: typeof AuthenticatedSettingsSecurityRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
+    }
+    '/_authenticated/settings/privacy': {
+      id: '/_authenticated/settings/privacy'
+      path: '/privacy'
+      fullPath: '/settings/privacy'
+      preLoaderRoute: typeof AuthenticatedSettingsPrivacyRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
+    }
+    '/_authenticated/settings/notifications': {
+      id: '/_authenticated/settings/notifications'
+      path: '/notifications'
+      fullPath: '/settings/notifications'
+      preLoaderRoute: typeof AuthenticatedSettingsNotificationsRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
+    }
+    '/_authenticated/settings/general': {
+      id: '/_authenticated/settings/general'
+      path: '/general'
+      fullPath: '/settings/general'
+      preLoaderRoute: typeof AuthenticatedSettingsGeneralRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
     }
     '/_authenticated/messages/$chatId': {
       id: '/_authenticated/messages/$chatId'
@@ -239,18 +397,46 @@ const AuthenticatedMessagesRouteWithChildren =
     AuthenticatedMessagesRouteChildren,
   )
 
+interface AuthenticatedSettingsRouteChildren {
+  AuthenticatedSettingsGeneralRoute: typeof AuthenticatedSettingsGeneralRoute
+  AuthenticatedSettingsNotificationsRoute: typeof AuthenticatedSettingsNotificationsRoute
+  AuthenticatedSettingsPrivacyRoute: typeof AuthenticatedSettingsPrivacyRoute
+  AuthenticatedSettingsSecurityRoute: typeof AuthenticatedSettingsSecurityRoute
+  AuthenticatedSettingsShortcutsRoute: typeof AuthenticatedSettingsShortcutsRoute
+  AuthenticatedSettingsStorageRoute: typeof AuthenticatedSettingsStorageRoute
+  AuthenticatedSettingsThemeRoute: typeof AuthenticatedSettingsThemeRoute
+  AuthenticatedSettingsIndexRoute: typeof AuthenticatedSettingsIndexRoute
+}
+
+const AuthenticatedSettingsRouteChildren: AuthenticatedSettingsRouteChildren = {
+  AuthenticatedSettingsGeneralRoute: AuthenticatedSettingsGeneralRoute,
+  AuthenticatedSettingsNotificationsRoute:
+    AuthenticatedSettingsNotificationsRoute,
+  AuthenticatedSettingsPrivacyRoute: AuthenticatedSettingsPrivacyRoute,
+  AuthenticatedSettingsSecurityRoute: AuthenticatedSettingsSecurityRoute,
+  AuthenticatedSettingsShortcutsRoute: AuthenticatedSettingsShortcutsRoute,
+  AuthenticatedSettingsStorageRoute: AuthenticatedSettingsStorageRoute,
+  AuthenticatedSettingsThemeRoute: AuthenticatedSettingsThemeRoute,
+  AuthenticatedSettingsIndexRoute: AuthenticatedSettingsIndexRoute,
+}
+
+const AuthenticatedSettingsRouteWithChildren =
+  AuthenticatedSettingsRoute._addFileChildren(
+    AuthenticatedSettingsRouteChildren,
+  )
+
 interface AuthenticatedRouteChildren {
   AuthenticatedAssistantRoute: typeof AuthenticatedAssistantRoute
   AuthenticatedContactsRoute: typeof AuthenticatedContactsRoute
   AuthenticatedMessagesRoute: typeof AuthenticatedMessagesRouteWithChildren
-  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRouteWithChildren
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAssistantRoute: AuthenticatedAssistantRoute,
   AuthenticatedContactsRoute: AuthenticatedContactsRoute,
   AuthenticatedMessagesRoute: AuthenticatedMessagesRouteWithChildren,
-  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRouteWithChildren,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
