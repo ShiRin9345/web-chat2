@@ -7,7 +7,7 @@ import { authClient } from "@/lib/auth-client";
 // Import the generated route tree
 import { routeTree } from "@/routeTree.gen";
 
-import "@workspace/ui/globals.css";
+import "@workspace/ui/orange.css";
 
 const TanStackQueryProviderContext = TanStackQueryProvider.getContext();
 const router = createRouter({

@@ -1,5 +1,6 @@
 import { Outlet, createRootRouteWithContext } from "@tanstack/react-router";
 import { authClient } from "@/lib/auth-client";
+import { ThemeProvider } from "@/providers/theme-provider";
 
 interface MyRouterContext {
   auth: typeof authClient;
@@ -8,7 +9,14 @@ interface MyRouterContext {
 export const Route = createRootRouteWithContext<MyRouterContext>()({
   component: () => (
     <>
-      <Outlet />
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="system"
+        enableSystem
+        disableTransitionOnChange
+      >
+        <Outlet />
+      </ThemeProvider>
     </>
   ),
 });

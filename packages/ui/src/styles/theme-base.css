@@ -1,0 +1,32 @@
+/* 公共头部 - Tailwind 导入和配置 */
+@import "tailwindcss";
+@import "tw-animate-css";
+@source "../**/*.{tsx}";
+@source "../../../apps/client/src/routes/**/*.{tsx}";
+
+@custom-variant dark (&:is(.dark *));
+
+/* 公共尾部 - Base 层和工具类 */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  /* 屏幕阅读器可见，视觉隐藏 */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+}

@@ -27,6 +27,7 @@ import { UserProfilePopover } from "@/components/UserProfilePopover";
 import { DialogProvider } from "@/providers/DialogProvider";
 import { CallProvider } from "@/providers/CallProvider";
 import { Toaster } from "@workspace/ui/components/sonner";
+import { ModeToggle } from "@/components/mode-toggle";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AuthenticatedLayout,
@@ -118,6 +119,7 @@ function AuthenticatedLayout() {
                 <Separator className="my-4" />
 
                 {/* 用户头像和菜单 */}
+                <ModeToggle />
                 <UserProfilePopover>
                   <button className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-accent transition-colors">
                     <Avatar className="h-8 w-8">

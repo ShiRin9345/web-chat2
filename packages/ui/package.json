@@ -60,11 +60,11 @@
     "vite": "^7.1.7"
   },
   "exports": {
-    "./globals.css": "./src/styles/globals.css",
     "./postcss.config": "./postcss.config.mjs",
     "./lib/*": "./src/lib/*.ts",
     "./components/*": "./src/components/*.tsx",
     "./components/ai": "./src/components/ai/index.tsx",
-    "./hooks/*": "./src/hooks/*.ts"
+    "./hooks/*": "./src/hooks/*.ts",
+    "./*.css": "./src/styles/*.css"
   }
 }
