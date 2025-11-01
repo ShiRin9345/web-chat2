@@ -90,9 +90,32 @@ async function loadThemeCSS(themeId: ThemeId): Promise<void> {
 }
 
 /**
+ * 移除所有主题类名
+ */
+function removeAllThemeClasses(): void {
+  const rootElement = document.documentElement;
+  const themeNames = [
+    "globals",
+    "orange",
+    "quantum-rose",
+    "claude",
+    "amethyst-haze",
+    "bold-tech",
+    "kodama-grove",
+    "soft-pop",
+    "starry-night",
+    "bugglegum",
+  ];
+  themeNames.forEach((name) => {
+    rootElement.classList.remove(`theme-${name}`);
+  });
+}
+
+/**
  * 主题 Provider
  * 监听主题变化并懒加载对应的 CSS 文件
  * 通过添加/移除类名来控制主题，避免CSS冲突
+ * 仅在已认证路由中使用，离开时自动清理主题类名
  */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const themeId = useThemeStore((state) => state.themeId);
@@ -100,6 +123,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // 懒加载主题CSS并应用类名
     loadThemeCSS(themeId);
+
+    // 清理函数：组件卸载时移除所有主题类名
+    return () => {
+      removeAllThemeClasses();
+    };
   }, [themeId]);
 
   return <>{children}</>;
