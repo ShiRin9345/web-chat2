@@ -66,6 +66,7 @@
     "./components/*": "./src/components/*.tsx",
     "./components/ai": "./src/components/ai/index.tsx",
     "./hooks/*": "./src/hooks/*.ts",
-    "./*.css": "./src/styles/*.css"
+    "./*.css": "./src/styles/*.css",
+    "./styles/*": "./src/styles/*.css"
   }
 }
