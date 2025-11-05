@@ -59,7 +59,6 @@ export function useWebRTC({
   const [recordId, setRecordId] = useState<string | undefined>(initialRecordId);
 
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
-  const iceCandidatesQueueRef = useRef<RTCIceCandidateInit[]>([]);
   const isConnectedRef = useRef(false); // 跟踪是否已连接
   const localStreamRef = useRef<MediaStream | null>(null); // 保存最新的 localStream 引用
 
@@ -91,7 +90,6 @@ export function useWebRTC({
       localStreamRef.current = stream; // 同步更新 ref
       return stream;
     } catch (err) {
-      console.error("获取媒体设备失败:", err);
       setError("无法访问摄像头或麦克风，请检查设备权限");
       updateConnectionState("error");
       return null;
@@ -105,38 +103,30 @@ export function useWebRTC({
     // 处理 ICE 候选
     pc.onicecandidate = (event) => {
       if (event.candidate && socket) {
-        console.log("发送 ICE Candidate 给好友:", friendId);
         socket.emit("webrtc:ice-candidate", {
           roomId,
           candidate: event.candidate.toJSON(),
           targetUserId: friendId,
         });
-      } else if (!event.candidate) {
-        console.log("所有 ICE Candidate 已收集完成");
       }
     };
 
     // 接收远程流
     pc.ontrack = (event) => {
-      console.log("收到远程媒体流, 轨道类型:", event.track.kind);
       if (event.streams && event.streams[0]) {
-        console.log("设置远程流");
         setRemoteStream(event.streams[0]);
       }
     };
 
     // 连接状态变化
     pc.onconnectionstatechange = () => {
-      console.log("连接状态变化:", pc.connectionState);
       if (pc.connectionState === "connected") {
-        console.log("WebRTC 连接已建立");
         updateConnectionState("connected");
         // 通知后端已连接
         if (socket && recordId) {
           socket.emit("call:connected", { recordId, userId });
         }
       } else if (pc.connectionState === "failed") {
-        console.error("连接失败:", pc.connectionState);
         setError("连接失败，请检查网络");
         updateConnectionState("error");
         // 通知对方连接失败
@@ -153,10 +143,8 @@ export function useWebRTC({
         pc.connectionState === "disconnected" ||
         pc.connectionState === "closed"
       ) {
-        console.warn("连接断开或关闭:", pc.connectionState);
         // 如果是在通话中突然断开（不是正常挂断）
         if (isConnectedRef.current) {
-          console.log("检测到通话中连接断开");
           setError("对方网络丢失，通话已断开");
           updateConnectionState("ended");
           // 通知对方连接已断开
@@ -193,15 +181,10 @@ export function useWebRTC({
   const createOffer = useCallback(
     async (pc: RTCPeerConnection) => {
       try {
-        console.log("开始创建 Offer, PeerConnection 状态:", pc.signalingState);
         const offer = await pc.createOffer();
-        console.log("创建 Offer 成功:", offer);
-
         await pc.setLocalDescription(offer);
-        console.log("设置本地描述成功");
 
         if (socket) {
-          console.log("发送 Offer 给好友:", friendId);
           socket.emit("webrtc:offer", {
             roomId,
             offer: offer,
@@ -209,7 +192,6 @@ export function useWebRTC({
           });
         }
       } catch (err) {
-        console.error("创建 Offer 失败:", err);
         setError("创建连接失败");
         updateConnectionState("error");
       }
@@ -221,15 +203,10 @@ export function useWebRTC({
   const createAnswer = useCallback(
     async (pc: RTCPeerConnection) => {
       try {
-        console.log("开始创建 Answer, PeerConnection 状态:", pc.signalingState);
         const answer = await pc.createAnswer();
-        console.log("创建 Answer 成功:", answer);
-
         await pc.setLocalDescription(answer);
-        console.log("设置本地描述成功");
 
         if (socket) {
-          console.log("发送 Answer 给好友:", friendId);
           socket.emit("webrtc:answer", {
             roomId,
             answer: answer,
@@ -237,7 +214,6 @@ export function useWebRTC({
           });
         }
       } catch (err) {
-        console.error("创建 Answer 失败:", err);
         setError("创建连接失败");
         updateConnectionState("error");
       }
@@ -252,7 +228,6 @@ export function useWebRTC({
       if (audioTrack) {
         audioTrack.enabled = !audioTrack.enabled;
         setIsAudioEnabled(audioTrack.enabled);
-        console.log("🎤 音频状态:", audioTrack.enabled ? "开启" : "关闭");
       }
     }
   }, []);
@@ -264,36 +239,22 @@ export function useWebRTC({
       if (videoTrack) {
         videoTrack.enabled = !videoTrack.enabled;
         setIsVideoEnabled(videoTrack.enabled);
-        console.log("📹 视频状态:", videoTrack.enabled ? "开启" : "关闭");
       }
     }
   }, [callType]);
 
   // 结束通话
   const endCall = useCallback(() => {
-    console.log("📞 结束通话，清理资源...");
-
     // 使用 ref 获取最新的 localStream
     if (localStreamRef.current) {
-      console.log(
-        "🛑 停止本地媒体流，轨道数量:",
-        localStreamRef.current.getTracks().length
-      );
       localStreamRef.current.getTracks().forEach((track) => {
-        console.log(
-          `  - 停止轨道: ${track.kind}, enabled: ${track.enabled}, readyState: ${track.readyState}`
-        );
         track.stop();
-        console.log(`  - 轨道已停止, readyState: ${track.readyState}`);
       });
       localStreamRef.current = null; // 清空引用
-    } else {
-      console.warn("⚠️ 没有找到本地媒体流");
     }
 
     // 关闭 PeerConnection
     if (peerConnectionRef.current) {
-      console.log("🔌 关闭 PeerConnection");
       peerConnectionRef.current.close();
       peerConnectionRef.current = null;
     }
@@ -326,8 +287,6 @@ export function useWebRTC({
     if (!socket) return;
 
     const init = async () => {
-      console.log("初始化通话, isInitiator:", isInitiator);
-
       // 获取本地媒体流
       const stream = await initLocalStream();
       if (!stream) return;
@@ -337,13 +296,11 @@ export function useWebRTC({
 
       // 添加本地流到 PeerConnection
       stream.getTracks().forEach((track) => {
-        console.log("添加媒体轨道:", track.kind);
         pc.addTrack(track, stream);
       });
 
       if (isInitiator) {
         // 发起方：发送通话请求
-        console.log("发起方：发送通话请求");
         updateConnectionState("calling");
         socket.emit("call:request", {
           roomId,
@@ -354,7 +311,6 @@ export function useWebRTC({
         // 注意：发起方需要等待接收方接受后才创建 Offer
       } else {
         // 接收方：发送接受信令
-        console.log("接收方：发送接受信令");
         updateConnectionState("connecting");
         socket.emit("call:accept", {
           roomId,
@@ -369,7 +325,6 @@ export function useWebRTC({
 
     // 监听浏览器标签页关闭/刷新事件
     const handleBeforeUnload = () => {
-      console.log("🚪 检测到标签页即将关闭，发送结束通话信令");
       // 立即通知对方通话结束
       if (socket && recordId) {
         socket.emit("call:end", {
@@ -382,7 +337,6 @@ export function useWebRTC({
       }
       // 停止所有媒体轨道
       if (localStreamRef.current) {
-        console.log("🛑 beforeunload: 停止本地媒体流");
         localStreamRef.current.getTracks().forEach((track) => track.stop());
         localStreamRef.current = null;
       }
@@ -396,21 +350,17 @@ export function useWebRTC({
 
     // 清理函数
     return () => {
-      console.log("🧹 useEffect 清理函数执行");
       window.removeEventListener("beforeunload", handleBeforeUnload);
 
       // 使用 ref 清理最新的 localStream
       if (localStreamRef.current) {
-        console.log("🛑 cleanup: 停止本地媒体流");
         localStreamRef.current.getTracks().forEach((track) => {
-          console.log(`  - 停止轨道: ${track.kind}`);
           track.stop();
         });
         localStreamRef.current = null;
       }
 
       if (peerConnectionRef.current) {
-        console.log("🔌 cleanup: 关闭 PeerConnection");
         peerConnectionRef.current.close();
       }
     };
@@ -427,14 +377,10 @@ export function useWebRTC({
 
     // 通话被接受
     const handleCallAccepted = async () => {
-      console.log("对方已接受通话，开始创建 Offer");
       updateConnectionState("connecting");
       const pc = peerConnectionRef.current;
       if (pc) {
-        console.log("PeerConnection 状态:", pc.signalingState);
         await createOffer(pc);
-      } else {
-        console.error("PeerConnection 不存在");
       }
     };
 
@@ -443,38 +389,16 @@ export function useWebRTC({
       offer: RTCSessionDescriptionInit;
       fromUserId: string;
     }) => {
-      console.log("收到 Offer:", data);
       const pc = peerConnectionRef.current;
       if (pc) {
         try {
-          console.log("设置远程描述 (Offer)");
           await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-          console.log(
-            "远程描述设置成功，PeerConnection 状态:",
-            pc.signalingState
-          );
-
-          // 处理队列中的 ICE candidates
-          console.log(
-            "处理缓存的 ICE candidates, 数量:",
-            iceCandidatesQueueRef.current.length
-          );
-          while (iceCandidatesQueueRef.current.length > 0) {
-            const candidate = iceCandidatesQueueRef.current.shift();
-            if (candidate) {
-              await pc.addIceCandidate(new RTCIceCandidate(candidate));
-            }
-          }
-
           // 创建 Answer
           await createAnswer(pc);
         } catch (err) {
-          console.error("处理 Offer 失败:", err);
           setError("连接失败");
           updateConnectionState("error");
         }
-      } else {
-        console.error("PeerConnection 不存在");
       }
     };
 
@@ -483,56 +407,37 @@ export function useWebRTC({
       answer: RTCSessionDescriptionInit;
       fromUserId: string;
     }) => {
-      console.log("收到 Answer:", data);
       const pc = peerConnectionRef.current;
       if (pc) {
         try {
-          console.log("设置远程描述 (Answer)");
           await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
-          console.log(
-            "远程描述设置成功，PeerConnection 状态:",
-            pc.signalingState
-          );
-
-          // 处理队列中的 ICE candidates
-          console.log(
-            "处理缓存的 ICE candidates, 数量:",
-            iceCandidatesQueueRef.current.length
-          );
-          while (iceCandidatesQueueRef.current.length > 0) {
-            const candidate = iceCandidatesQueueRef.current.shift();
-            if (candidate) {
-              await pc.addIceCandidate(new RTCIceCandidate(candidate));
-            }
-          }
         } catch (err) {
-          console.error("处理 Answer 失败:", err);
           setError("连接失败");
           updateConnectionState("error");
         }
-      } else {
-        console.error("PeerConnection 不存在");
       }
     };
 
     // 接收 ICE Candidate
+    // 使用 WebRTC 内置的 Trickle ICE 机制，不需要手动维护队列
+    // addIceCandidate() 可以在设置远程描述之前调用，浏览器会自动处理
     const handleReceiveIce = async (data: {
       candidate: RTCIceCandidateInit;
       fromUserId: string;
     }) => {
-      console.log("收到 ICE Candidate:", data);
       const pc = peerConnectionRef.current;
-      if (pc && pc.remoteDescription) {
-        try {
-          console.log("添加 ICE Candidate");
-          await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
-        } catch (err) {
-          console.error("添加 ICE Candidate 失败:", err);
-        }
-      } else {
-        // 如果还没有远程描述，先缓存 ICE candidate
-        console.log("缓存 ICE Candidate（还没有远程描述）");
-        iceCandidatesQueueRef.current.push(data.candidate);
+      if (!pc) {
+        return;
+      }
+
+      try {
+        // 直接添加，WebRTC 会自动处理早到的 candidates
+        await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+      } catch (err) {
+        // 可能的错误情况：
+        // - PeerConnection 已关闭
+        // - candidate 格式无效
+        // - 重复的 candidate（通常被忽略，不会抛出错误）
       }
     };
 
